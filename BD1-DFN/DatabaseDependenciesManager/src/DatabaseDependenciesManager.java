@@ -1,6 +1,6 @@
 import java.sql.*;
 import java.io.Console;
-import java.util.ArrayList;
+import java.util.*;
 
 /**
 * Class that allows the management of databases and their functional dependencies
@@ -17,16 +17,32 @@ public class DatabaseDependenciesManager
 	private static ResultSet result = null;
 	private static Console console = System.console();
 	
-	/**
-	* Retrieved data related fields
+	/*
+	* Number of dependencies currently in the database
 	*/
 	private static int ndep = 0;
+
+	/*
+	* List containing the name of the table within the database
+	*/
 	private static ArrayList<String> table_name_list = new ArrayList<String>();
+
+	/*
+	* List containing the table affected by each dependencies
+	*/
 	private static ArrayList<String> table_dep_list = new ArrayList<String>();
+
+	/*
+	* List containing the left-hand side of every dependencies
+	*/
 	private static ArrayList<String> lhs_list = new ArrayList<String>();
+
+	/*
+	* List containing the right-hand side of every dependencies
+	*/
 	private static ArrayList<String> rhs_list = new ArrayList<String>();
-	
-	
+
+
 	public static void main(String[] args)
 	{
 		if(console==null)
@@ -42,35 +58,42 @@ public class DatabaseDependenciesManager
 		{
 			String commandLine = console.readLine();
 			String[] commandArgs = commandLine.split(" ");
+
+			if(commandArgs[0].equals("") && connection==null){try{connect("../test_DB/test.db");}catch(SQLException sqle){sqle.printStackTrace();}continue;}//testing purpose
 			
-			if(commandArgs[0].equals("exit") || commandArgs[0].equals("quit"))
+			if(commandArgs[0].equals(""))
+			{
+				continue;
+			}
+			
+			else if(commandArgs[0].equals("exit") || commandArgs[0].equals("quit"))
 			{
 				System.out.println("bye");
 				System.exit(0);
 			}
 			
-			if(commandArgs[0].equals("help"))
+			else if(commandArgs[0].equals("help"))
 			{
 				System.out.println(""
 									+"add\n"
 									+"\tHelps adding a dependency\n"			
 									+"connect [path]\n"
-									+"\t Connects to a database.\n"
+									+"\tConnects to a database.\n"
 									+"delete\n"
 									+"\tHelps deleteting a dependency\n"
 									+"disconnect\n"
 									+"\tDisconnects from current database\n"
 									+"list [table]\n"
-									+"\t Lists dependencies associated to current database.\n"
+									+"\tLists dependencies associated to current database.\n"
 									+"quit\n"
-									+"\t Quits application.\n"
+									+"\tQuits application.\n"
 									+"sql [command]\n"
-									+"\t Execute an sql command, no output will be shown.\n"
+									+"\tExecute an sql command, no output will be shown.\n"
 									+"useless\n"
-									+"\t finds useless dependencies and allows to delete them\n");
+									+"\tFinds useless dependencies and allows to delete them\n");
 			}
 			
-			if(connection==null && !commandArgs[0].equals("connect"))
+			else if(connection==null && !commandArgs[0].equals("connect"))
 			{
 				System.out.println("You must connect to a database first");
 				continue;
@@ -85,14 +108,10 @@ public class DatabaseDependenciesManager
 							if(table_name_list.size()>0)
 							{
 								String table = selectTable("Which table does the dependency affects ?",false);
-								String lhs = selectAttributes("Which attribute(s) makes the left-hand side of the lhs->rhs dependency ?\nFor multiple arguments, separate them with spaces", table, true);
+								String lhs = selectAttributes("Which attribute(s) makes the left-hand side of the lhs->rhs dependency ?\nFor multiple arguments, use spaces", table, true);
 								String rhs = selectAttributes("Which attribute makes the right-hand side of the lhs->rhs dependency ?", table, false);
 							
-								writeDep(table,rhs,lhs);
-								ndep++;
-								table_dep_list.add(table);
-								lhs_list.add(lhs);
-								rhs_list.add(rhs);
+								addDep(table,lhs,rhs);
 							}
 							else
 							{
@@ -114,6 +133,7 @@ public class DatabaseDependenciesManager
 						try{
 							connect(commandArgs[1]);
 						}catch(SQLException sqle){
+							sqle.printStackTrace();
 							System.out.println("Can't connect");
 							continue;
 						}
@@ -130,32 +150,11 @@ public class DatabaseDependenciesManager
 						try{
 							String table = selectTable("Which table to delete a dependency from ?",false);
 						
-							System.out.println("Which dependency to delete ? Type number corresponding to the dependency");
-							listDep(table,true);
-						
-							String dep = "";
-							int nb = 0;
-							boolean correctnb=false;
-						
-							while(!correctnb)
+							int[] dep=selectDepNumber(table, true, "Which dependency to delete ?\nFor multiple arguments, use spaces");
+							for(int i=dep.length-1; i>=0; i--)
 							{
-								dep=console.readLine();
-								try{
-									nb = Integer.parseInt(dep);
-									if(nb>0 && nb<=ndep)
-										correctnb=true;
-									else
-									{
-										correctnb=false;
-										System.out.println("No dependency has that number, try again");
-									}
-								}catch(NumberFormatException nfe){
-									System.out.println("Not a number, try again");
-									nb=0;
-								}
+								deleteDep(table_dep_list.remove(dep[i]-1), lhs_list.remove(dep[i]-1), rhs_list.remove(dep[i]-1));
 							}
-							nb--;
-							deleteDep(table_dep_list.remove(nb), lhs_list.remove(nb), rhs_list.remove(nb));
 						
 						}catch(SQLException sqle){ 
 							sqle.printStackTrace();
@@ -336,18 +335,7 @@ public class DatabaseDependenciesManager
 		rhs_list.clear();
 		
 		checkFuncDepTable();
-		statement=connection.createStatement();
-		result = statement.executeQuery("SELECT * FROM FuncDep");
-		
-		while(result.next()) 
-		{	
-			table_dep_list.add(result.getString("table_name"));
-			lhs_list.add(result.getString("lhs"));
-			rhs_list.add(result.getString("rhs"));
-		}
-		
-		ndep=table_dep_list.size();
-		
+
 		DatabaseMetaData dmd = connection.getMetaData();
 		result = dmd.getTables(null, null, "%", null);
 		
@@ -357,6 +345,25 @@ public class DatabaseDependenciesManager
 				continue;
 			table_name_list.add(result.getString(3));
 		}
+
+		statement=connection.createStatement();
+		result = statement.executeQuery("SELECT * FROM FuncDep");
+		
+		while(result.next()) 
+		{	
+			if(table_name_list.contains(result.getString("table_name")))
+			{
+				table_dep_list.add(result.getString("table_name"));
+				lhs_list.add(result.getString("lhs"));
+				rhs_list.add(result.getString("rhs"));
+			}
+			else
+			{
+				deleteDep(result.getString("table_name"),result.getString("lhs"),result.getString("rhs"));
+			}
+		}
+		
+		ndep=table_dep_list.size();
 	}
 	
 	/**
@@ -378,18 +385,24 @@ public class DatabaseDependenciesManager
 	* Adds a dependency (table, lhs, rhs) in the relation FuncDep.
 	*
 	* @param table 	String, table affected by the dependency to add
-	* @param lhs 	String, left-hand element(s) of the dependency to add
+	* @param lhs 	String, left-hand element(s) of the dependency to add (can describe multiple elements)
 	* @param rhs 	String, right-hand element of the dependency to add
 	*/
-	private static void writeDep(String table, String lhs, String rhs)
+	private static void addDep(String table, String lhs, String rhs)
 	throws SQLException
 	{
 		checkFuncDepTable();
 		statement=connection.createStatement();
+
 		statement.execute("INSERT INTO FuncDep VALUES('"+table+"','"+lhs+"','"+rhs+"')");
-		
-		System.out.println("Dependency '"+table+"' : '"+rhs+"' -> '"+lhs+"'  added"); //TODO idk why rhs and lhs prints the other one, had to switch them
-		
+		ndep++;
+
+		table_dep_list.add(table);
+		lhs_list.add(lhs);
+		rhs_list.add(rhs);
+
+		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  added"); 
+
 		if(statement!=null)
 			statement.close();
 	}
@@ -413,12 +426,13 @@ public class DatabaseDependenciesManager
 			System.out.println("No dependencies for table '"+table+"'");
 			return;
 		}
+
 		for(int i=0; i<table_dep_list.size(); i++)
 		{
 			if(table_dep_list.get(i).equals(table) || table.equals(""))
 			{
 				if(enumerate)
-					System.out.print("> "+(i+1)+". ");
+					System.out.print("("+(i+1)+") ");
 				System.out.println(table_dep_list.get(i)+" : "+lhs_list.get(i)+" -> "+rhs_list.get(i));
 			}
 		}
@@ -487,7 +501,7 @@ public class DatabaseDependenciesManager
 			else
 			{
 				column_names.clear();
-				column_names = listAttributes(table_dep_list.get(i),false);
+				column_names = listAttributes(table_dep_list.get(i));
 			
 				if(!column_names.contains(lhs_list.get(i)) || !column_names.contains(rhs_list.get(i)))
 					UselessDepIndex.add(i);
@@ -551,31 +565,52 @@ public class DatabaseDependenciesManager
 	}
 	
 	/**
-	* Selects a table in the current database
+	* Selects a table in the current database using index
 	*
 	* @param message 	String, message to display before selecting the table
-	* @param allowNone 	boolean, allows to chose no table
+	* @param none 	boolean, allows to chose no table
 	* @return 			String, name of the selected table
 	*/
-	private static String selectTable(String message, boolean allowNone)
+	private static String selectTable(String message, boolean none)
 	throws SQLException
 	{
+		String table_name="";
+		int nb=0;
+
 		System.out.println(message);
 		
-		for(String table_name : table_name_list)
+		for(int i=0; i<table_name_list.size(); i++)
 		{
-			System.out.println("> "+table_name);
+			System.out.println("("+(i+1)+") "+table_name_list.get(i));
 		}
-		
-		String table = console.readLine();
-		
-		while(!table_name_list.contains(table) && !(allowNone && table.equals("")))
+
+		while(true)
 		{
-			table = console.readLine("No such table, try again : ");
+			String in = console.readLine();
+
+			if(in.equals("") && none)
+				break;
+
+			try{
+				nb = Integer.parseInt(in);
+				if(nb>0 && nb<=table_name_list.size())
+				{
+					System.out.println("Table '"+table_name_list.get(nb-1)+"' selected");
+					table_name = table_name_list.get(nb-1);
+					break;
+				}
+				else
+				{
+					System.out.println("No table has that number, try again");
+					continue;
+				}
+			}catch(NumberFormatException nfe){
+				System.out.println(in+" is not a number, try again");
+				continue;
+			}
 		}
-		
-		System.out.println("Table '"+table+"' selected");
-		return table;
+
+		return table_name;
 	}
 	
 	/**
@@ -589,57 +624,158 @@ public class DatabaseDependenciesManager
 	private static String selectAttributes(String message, String table, boolean multiple)
 	throws SQLException
 	{
+		String attributes = "";
+		boolean done = false;
+
 		System.out.println(message);
 		
-		ArrayList<String> column_names = listAttributes(table, true);
-	
-		String attr = console.readLine();
-		String[] attrArgs = attr.split(" ");
-	
-		while(true)
+		ArrayList<String> table_attributes = listAttributes(table);
+
+		for(int i=0; i<table_attributes.size(); i++)
 		{
-			if(!multiple && attrArgs.length>1)
-			{
-				System.out.println("Only one argument allowed, try again");
+			System.out.println("("+(i+1)+") "+table_attributes.get(i));
+		}
+
+		while(!done)
+		{
+			attributes="";
+			String in = console.readLine();
+
+			if(in.equals(""))
+			{	
 				continue;
 			}
-				
-			for(String attrArg : attrArgs)
+
+			String[] attr = in.split(" ");
+
+			if(attr.length>1 && !multiple)
 			{
-				if(!column_names.contains(attrArg))
-				{
-					attr = console.readLine("Table '"+table+"' does not contain attribute '"+attrArg+"', try again\n");
-					attrArgs = attr.split(" ");
-					continue;
-				}
+				System.out.println("Only one argument allowed");
+				continue;
 			}
-			System.out.println("Attribute(s) '"+attr+"' selected");
-			return attr;
+
+			int nb = 0;
+
+			for(int i=0; i<attr.length; i++)
+			{
+				try{
+					nb = Integer.parseInt(attr[i]);
+					if(nb>0 && nb<=table_attributes.size())
+					{
+						attributes += table_attributes.get(nb-1);
+						if(i==attr.length-1)
+						{
+							done=true;
+							break;
+						}
+					}
+					else
+					{
+						System.out.println("No attribute has that number, try again");
+						continue;
+					}
+				}catch(NumberFormatException nfe){
+					if(attr[i].equals(""))
+						continue;
+					System.out.println(attr[i]+" is not a number, try again");
+					break;
+				}
+
+				if(!(attributes.equals("")))
+				{
+					attributes+=" ";
+				}
+
+			}
 		}
+
+		return attributes;
 	}
 	
 	/**
 	* Lists attribute of a given table
 	*
 	* @param table 	String, name of the table
-	* @param print 	boolean, allows to print the attributes
 	* @return 		ArrayList<String> containing the attributes' name 
 	*/
-	private static ArrayList<String> listAttributes(String table, boolean print)
+	private static ArrayList<String> listAttributes(String table)
 	throws SQLException
 	{
-		ArrayList<String> column_names = new ArrayList<String>();
+		ArrayList<String> attributes = new ArrayList<String>();
 							
 		result = statement.executeQuery("SELECT * FROM "+table);
 		ResultSetMetaData metadata = result.getMetaData();
 	
 		for (int i=1; i<=metadata.getColumnCount(); i++)
 		{
-			column_names.add(metadata.getColumnName(i));
-			if(print)
-				System.out.println("> "+metadata.getColumnName(i));
+			attributes.add(metadata.getColumnName(i));
 		}
 		
-		return column_names;
+		return attributes;
+	}
+
+	/**
+	* Return a selection of dependencies using indexes.
+	*
+	* @param table 		String, name of the table
+	* @param multiple 	Boolean, true allows for multiple selection
+	* @param message 	String, message to be displayed before the selection 
+	* @return 			int[] containing the indexes
+	*
+	*/
+	private static int[] selectDepNumber(String table, boolean multiple, String message)
+	throws SQLException
+	{
+		ArrayList<Integer> depNumber = new ArrayList<Integer>();
+
+		System.out.println(message);
+		listDep(table, true);
+
+		boolean correctnb=false;
+		String dep = "";
+
+		while(!correctnb)
+		{
+			depNumber = new ArrayList<Integer>();
+			dep=console.readLine();
+			if(!multiple && dep.split(" ").length>1)
+			{
+				System.out.println("Not allowed to input multiple arguments");
+				continue;
+
+			}
+			for(String num : dep.split(" "))
+			{
+				int nb=0;
+
+				try{
+					nb = Integer.parseInt(num);
+					if(nb>0 && nb<=ndep)
+					{
+						depNumber.add(nb);
+					}
+					else
+					{
+						System.out.println("No dependency has that number, try again");
+						continue;
+					}
+				}catch(NumberFormatException nfe){
+					System.out.println("Not a number, try again");
+					continue;
+				}
+			}
+			correctnb=true;
+		}
+
+		Collections.sort(depNumber);
+
+		int[] ret = new int[depNumber.size()];
+
+		for(int i=0; i<depNumber.size(); i++)
+		{
+			ret[i]=(int)depNumber.get(i);
+		}
+		
+		return ret;
 	}
 }
