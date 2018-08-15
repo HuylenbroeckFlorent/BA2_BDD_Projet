@@ -2,49 +2,6 @@ import java.sql.*;
 import java.io.Console;
 import java.util.*;
 
-/*
-def is3nf(self,table):
-    if self.allP(table)==True or self.allK(table)==True:
-        return True
-    return False
-
-def allP(self,table):
-    Pr=self.getP(table)
-    names=self.getName(table)
-    for n in names:
-        ok=false
-        for p in Pr:
-            if p==n:
-                ok=True
-                breakh
-        if ok==False:
-            return False
-    return True
-
-def allK(self,table):
-    l=self.getLHS(table)
-    keys=self.getKeys(table)
-    for att in l:
-        ok=false
-        for k in keys:Il
-            if att==k:
-                ok=True
-                break
-        if ok==False:
-            return False
-    return True
-
-def getP(self,table)
-    keys=self.getKeys(table)
-    pr=[]
-    for k in keys:
-        tab=parse[k]
-        for att in tab:
-            pr.append(att)
-    return pr
-
-*/
-
 /**
 * Class that allows the management of databases and their functional dependencies
 *
@@ -84,8 +41,6 @@ public class DatabaseDependenciesManager
 	* List containing the right-hand side of every dependencies
 	*/
 	private static ArrayList<String> rhs_list = new ArrayList<String>();
-
-
 	public static void main(String[] args)
 	{
 		if(console==null)
@@ -144,6 +99,9 @@ public class DatabaseDependenciesManager
 
 			switch(commandArgs[0])
 			{
+				case "keys":
+					findKeys();
+					break;
 				case "add":
 					if(commandArgs.length==1)
 					{
@@ -561,7 +519,174 @@ public class DatabaseDependenciesManager
 	*/
 	private static void findKeys()
 	{
-		//TODO
+		ArrayList done = new ArrayList();
+		for (String table : table_dep_list){
+			if(!done.contains(table)){
+				done.add(table);
+				System.out.println("---" + table + "---\n");
+				ArrayList<String> attributes = new ArrayList();
+				ArrayList<String> nlnr = new ArrayList();
+				ArrayList<String> onlyR = new ArrayList();
+				ArrayList<String> onlyL = new ArrayList();
+				ArrayList<String> leftFD = new ArrayList();
+				ArrayList<String> rightFD = new ArrayList();
+				ArrayList keys = new ArrayList();
+				try{
+					attributes = listAttributes(table);
+				}catch(SQLException sqle){
+					sqle.printStackTrace();
+					System.out.println("Can't ");
+					continue;
+				}
+				Collections.sort(attributes);
+				System.out.println("Complete attribute(s) set: " + attributes);
+				nlnr.addAll(attributes);
+				for(int i=0; i<table_dep_list.size(); i++){   //make nlnr array with attributes not on left nor on right
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							leftFD.add(lhs_list.get(j));
+							for(String f : lhs_list.get(j).split(" ")){
+								onlyL.add(f);
+								removeDuplicate(onlyL);
+							}
+						}
+					}
+					for(int j=0; j<rhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							rightFD.add(rhs_list.get(j));
+							onlyR.add(rhs_list.get(j));
+							removeDuplicate(onlyR);
+						}
+					}
+				}
+				for(int i=0; i<table_dep_list.size(); i++){   //Now we remove
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							for(String f : lhs_list.get(j).split(" ")){
+								nlnr.remove(f);
+							}
+						}
+					}
+					for(int j=0; j<rhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							nlnr.remove(rhs_list.get(j));
+							onlyL.remove(rhs_list.get(j));
+						}
+					}
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							for(String f : lhs_list.get(j).split(" ")){
+								onlyR.remove(f);
+							}
+						}
+					}
+				}
+				removeDuplicate(nlnr);
+				removeDuplicate(onlyR);
+				removeDuplicate(onlyL);
+				Collections.sort(nlnr);
+				Collections.sort(onlyR);
+				Collections.sort(onlyL);
+				System.out.println("Step 1 Attribute(s) not on left nor on right: " + nlnr);
+				System.out.println("Step 2 Attribute(s) only on right: " +onlyR);
+				System.out.println("Step 3 Attribute(s) only on left: " +onlyL);
+				ArrayList<String> step4 = new ArrayList();
+				step4.addAll(nlnr);
+				step4.addAll(onlyL);
+				removeDuplicate(step4);
+				Collections.sort(step4);
+				System.out.println("Step 4 combine attribute(s) on step 1 and 3: " + step4);
+				ArrayList<String> step5 = closure(step4, leftFD, rightFD);
+				removeDuplicate(step5);
+				Collections.sort(step5);
+				System.out.println("Step 5 closure of the attribute(s) on step 4: " + step5);
+				if(step5.equals(attributes)){
+					keys = step4;
+					System.out.println("Step 6 closure of step 5 give us all attribute --> keys: " + keys);
+				}
+				else{
+					ArrayList<String> step6 = new ArrayList();
+					step6.addAll(attributes);
+					for(String attr : step4){
+						step6.remove(attr);
+					}
+					for(String attr : onlyR){
+						step6.remove(attr);
+					}
+					System.out.println("Step 6 Find attributes not included in step 4 and 2: " + step6);
+					System.out.println("Step 7 Test closures of attributes on step 4 + one attribute in step 6 one at a time:\n");
+					ArrayList<String> toTest = new ArrayList();
+					toTest.addAll(step4);
+					boolean candidateFound = false;
+					int attrToAdd = 1;
+					while(!candidateFound){
+						if(attrToAdd == 1 ){
+							for(String toAdd : step6){
+								toTest.add(toAdd);
+								ArrayList<String> res = closure(toTest,leftFD,rightFD);
+								removeDuplicate(res);
+								Collections.sort(res);
+								if(res.equals(attributes)){
+									ArrayList<String> copy = new ArrayList();
+									copy.addAll(toTest);
+									keys.add(copy);
+									System.out.println("--- Key found ! " + copy);
+
+									candidateFound = true;
+								}
+								toTest.clear();
+								toTest.addAll(step4);
+							}
+							attrToAdd++;
+						}
+						else{
+							System.out.println("TO DO");
+							candidateFound = true;
+						}
+					}
+				}
+				removeDuplicate(keys);
+				System.out.println("The candidate keys are: " + keys);
+				System.out.println();
+			}
+		}
+	}
+
+
+	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD){
+		ArrayList<String> res = new ArrayList();
+		res.addAll(attr);
+		ArrayList<String> newRes = new ArrayList();
+		newRes.addAll(res);
+		boolean modified = true;
+		while(modified){
+			modified = false;
+			for(int i = 0; i < leftFD.size(); i++){
+				ArrayList<String> left = new ArrayList();
+				for(String toAdd : leftFD.get(i).split(" ")){
+					left.add(toAdd);
+				}
+				boolean contains = true;
+				for(String test : left){
+					if(!res.contains(test)){
+						contains = false;
+					}
+				}
+				if(contains){
+					newRes.add(rightFD.get(i));
+					if(res.size() != newRes.size()){
+						modified = true;
+						res = newRes;
+					}
+				}
+			}
+		}
+		return res;
+	}
+	private static void removeDuplicate(ArrayList input){
+		Set<String> noDuplicate = new LinkedHashSet<String>(input);
+		input.clear();
+		input.addAll(noDuplicate);
 	}
 
 	/*
@@ -578,7 +703,7 @@ public class DatabaseDependenciesManager
 	*/
 	private static boolean is3NF()
 	{
-		//TODO
+	  //TODO
 		return false;
 	}
 
