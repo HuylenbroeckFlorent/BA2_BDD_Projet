@@ -1,7 +1,6 @@
 import java.sql.*;
 import java.io.Console;
 import java.util.*;
-
 /**
 * Class that allows the management of databases and their functional dependencies
 *
@@ -530,7 +529,7 @@ public class DatabaseDependenciesManager
 				ArrayList<String> onlyL = new ArrayList();
 				ArrayList<String> leftFD = new ArrayList();
 				ArrayList<String> rightFD = new ArrayList();
-				ArrayList keys = new ArrayList();
+				ArrayList<ArrayList> keys = new ArrayList();
 				try{
 					attributes = listAttributes(table);
 				}catch(SQLException sqle){
@@ -601,7 +600,7 @@ public class DatabaseDependenciesManager
 				Collections.sort(step5);
 				System.out.println("Step 5 closure of the attribute(s) on step 4: " + step5);
 				if(step5.equals(attributes)){
-					keys = step4;
+					keys.add(step4);
 					System.out.println("Step 6 closure of step 5 give us all attribute --> keys: " + keys);
 				}
 				else{
@@ -648,6 +647,9 @@ public class DatabaseDependenciesManager
 				removeDuplicate(keys);
 				System.out.println("The candidate keys are: " + keys);
 				System.out.println();
+				System.out.println("--- BCNF ---: " + isBCNF(leftFD,keys));
+				System.out.println("--- 3NF ---: " + is3NF(leftFD,rightFD,keys));
+				System.out.println();
 			}
 		}
 	}
@@ -692,19 +694,29 @@ public class DatabaseDependenciesManager
 	/*
 	* Checks if the database respects BCNF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
-	private static boolean isBCNF()
+	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
 	{
-		//TODO
-		return false;
+		for(String toTest : leftFD){
+			if(!keys.contains(toTest))
+				return false;
+		}
+		return true;
 	}
 
 	/*
 	* Checks if the database respects 3NF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
-	private static boolean is3NF()
+	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
-	  //TODO
-		return false;
+		for(int i = 0;i < leftFD.size(); i++){
+			if(!keys.contains((String)leftFD.get(i)))
+			for(ArrayList<String> key :  keys ){
+				if(!key.contains((String)rightFD.get(i))){
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/*
