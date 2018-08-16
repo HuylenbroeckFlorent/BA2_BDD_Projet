@@ -571,21 +571,7 @@ public class DatabaseDependenciesManager
 	*/
 	private static void findLogicalConsequences()
 	{
-		for(int i=0; i<rhs_list.size(); i++)
-		{
-			for(int j=0; j<lhs_list.size(); j++)
-			{
-				if(table_dep_list.get(i).equals(table_dep_list.get(j)) && rhs_list.get(i).equals(lhs_list.get(j)))
-				{
-					System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(j)+"'\n"
-											+"Is a logical consequence of :\n"
-											+"Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"'\n"
-											+"and\n"
-											+"Dependency '"+table_dep_list.get(j)+"' : '"+lhs_list.get(j)+"' -> '"+rhs_list.get(j)+"'\n");
-				}
-			}
-
-		}
+		
 	}
 
 	/**
@@ -710,7 +696,7 @@ public class DatabaseDependenciesManager
 				removeDuplicate(step4);
 				Collections.sort(step4);
 				System.out.println("Step 4 - Combine attribute(s) from step 1 and 3: " + step4);
-				ArrayList<String> step5 = closure(step4, leftFD, rightFD);
+				ArrayList<String> step5 = closure(step4, table);
 				removeDuplicate(step5);
 				Collections.sort(step5);
 				System.out.println("Step 5 - Closure of the attribute(s) from step 4 : " + step5);
@@ -728,7 +714,7 @@ public class DatabaseDependenciesManager
 						step6.remove(attr);
 					}
 					System.out.println("Step 6 - Find attribute(s) not included in step 4 and 2 : " + step6);
-					System.out.println("Step 7 - Test closures of attribute(s) on step 4 plus one attribute from step 6 at a time :\n");
+					System.out.println("Step 7 - Test closures of attribute(s) from step 4, plus one attribute from step 6 at a time :");
 					ArrayList<String> toTest = new ArrayList();
 					toTest.addAll(step4);
 					boolean candidateFound = false;
@@ -744,7 +730,7 @@ public class DatabaseDependenciesManager
 								for(String temp1 : toAdd.split("")){
 									toTest.add(temp1);
 								}
-								ArrayList<String> res = closure(toTest,leftFD,rightFD);
+								ArrayList<String> res = closure(toTest,table);
 								removeDuplicate(res);
 								Collections.sort(res);
 								if(res.equals(attributes)){
@@ -752,7 +738,7 @@ public class DatabaseDependenciesManager
 									copy.addAll(toTest);
 									Collections.sort(copy);
 									keys.add(copy);
-									System.out.println("\tKey found ! " + copy);
+									System.out.println("\t- Key found : " + copy);
 									candidateFound = true;
 								}
 								toTest.clear();
@@ -764,9 +750,9 @@ public class DatabaseDependenciesManager
 					}
 				}
 				removeDuplicate(keys);
-				System.out.println("The candidate keys are : " + keys+"\n");
-				System.out.println("--- BCNF ---: " + isBCNF(leftFD,keys));
-				System.out.println("--- 3NF ---: " + is3NF(leftFD,rightFD,keys)+"\n");
+				System.out.println("\nThe candidate keys are : " + keys+"\n");
+				System.out.println("--- BCNF ---\n" + isBCNF(leftFD,keys)+"\n");
+				System.out.println("--- 3NF ---\n" + is3NF(leftFD,rightFD,keys)+"\n");
 			}
 		}
 	}
@@ -808,54 +794,66 @@ public class DatabaseDependenciesManager
 					combinationUtil(arr, data, i+1, end, index+1, r, res);
 				}
 			}
-
-
+ 
 	/**
-	* Calculate the closure of a set of attributes.
+	* Figures out the closure of a given table for a given set of attribute
 	*
-	* @param attr 		ArrayList<String>, the set of attributes.
-	* @param leftFD 	ArrayList<String>, left part of the functional dependencies.
-	* @param rightFD 	ArrayList<String>, right part of the functional dependencies.
-	* @return 			ArrayList<String>, the closure asked.
+	* @param attributes 	ArrayList<String>, the set of attribute
+	* @param table 			String, name of the given table
+	* @return 				ArrayList<String>, closure
 	*/
-	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD)
+	private static ArrayList<String> closure(ArrayList<String> attributes, String table)
 	{
-		ArrayList<String> res = new ArrayList();
-		res.addAll(attr);
-		ArrayList<String> newRes = new ArrayList();
-		newRes.addAll(res);
-		boolean modified = true;
-		while(modified)
+		ArrayList<String> unusedLeft = new ArrayList<String>();
+		ArrayList<String> unusedRight = new ArrayList<String>();
+
+		ArrayList<String> closure = new ArrayList<String>();
+		closure.addAll(attributes);
+
+		for(int i=0; i<table_dep_list.size(); i++)
 		{
-			modified = false;
-			for(int i = 0; i < leftFD.size(); i++)
+			if(table_dep_list.get(i).equals(table))
 			{
-				ArrayList<String> left = new ArrayList();
-				for(String toAdd : leftFD.get(i).split(" "))
-				{
-					left.add(toAdd);
-				}
-				boolean contains = true;
-				for(String test : left)
-				{
-					if(!res.contains(test))
-					{
-						contains = false;
-					}
-				}
-				if(contains)
-				{
-					newRes.add(rightFD.get(i));
-					if(res.size() != newRes.size())
-					{
-						modified = true;
-						res = newRes;
-					}
-				}
+				unusedLeft.add(lhs_list.get(i));
+				unusedRight.add(rhs_list.get(i));
 			}
 		}
-		return res;
+
+		ArrayList<String> closure_copy = new ArrayList<String>();
+
+		do{
+			closure_copy.clear();
+			closure_copy.addAll(closure);
+
+			boolean containsLHS=true;
+			
+			for(int i=0; i<unusedRight.size(); i++)
+			{
+				for(String uniqueLHS : unusedLeft.get(i).split(" "))
+				{
+					containsLHS = containsLHS && attributes.contains(uniqueLHS);
+				}
+
+				if(containsLHS)
+				{
+					closure.add(unusedRight.get(i));
+					removeDuplicate(closure);
+				}
+				else
+				{
+					containsLHS=true;
+				}
+			}
+
+			Collections.sort(closure);
+			Collections.sort(closure_copy);
+
+		}while(!(closure.equals(closure_copy)));
+
+		return closure;
 	}
+
+
 	/**
 	* Remove duplicates in the given Arraylist.
 	*
