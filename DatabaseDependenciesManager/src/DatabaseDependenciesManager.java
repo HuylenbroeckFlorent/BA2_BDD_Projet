@@ -571,7 +571,38 @@ public class DatabaseDependenciesManager
 	*/
 	private static void findLogicalConsequences()
 	{
-		
+		for(int i=0; i<table_dep_list.size(); i++)
+		{
+			ArrayList<String> left_attributes_of_dep_i = new ArrayList<String>();
+
+			for(String uniqueLHS : lhs_list.get(i).split(" "))
+			{
+				left_attributes_of_dep_i.add(uniqueLHS);
+			}
+
+			ArrayList<String> lhs_without_dep_i = new ArrayList<String>();
+			ArrayList<String> rhs_without_dep_i = new ArrayList<String>();
+
+			for(int j=0; j<lhs_list.size(); j++)
+			{
+				if(j==i)
+				{
+					continue;
+				}
+				if(table_dep_list.get(j).equals(table_dep_list.get(i)))
+				{
+					lhs_without_dep_i.add(lhs_list.get(j));
+					rhs_without_dep_i.add(rhs_list.get(j));
+				}
+			}
+
+			ArrayList<String> closure = closure(left_attributes_of_dep_i, lhs_without_dep_i, rhs_without_dep_i);
+
+			if(closure.contains(rhs_list.get(i)))
+			{
+				System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"' is a logical consequence");
+			}
+		}
 	}
 
 	/**
@@ -696,7 +727,7 @@ public class DatabaseDependenciesManager
 				removeDuplicate(step4);
 				Collections.sort(step4);
 				System.out.println("Step 4 - Combine attribute(s) from step 1 and 3: " + step4);
-				ArrayList<String> step5 = closure(step4, table);
+				ArrayList<String> step5 = closure(step4, leftFD,rightFD);
 				removeDuplicate(step5);
 				Collections.sort(step5);
 				System.out.println("Step 5 - Closure of the attribute(s) from step 4 : " + step5);
@@ -730,7 +761,7 @@ public class DatabaseDependenciesManager
 								for(String temp1 : toAdd.split("")){
 									toTest.add(temp1);
 								}
-								ArrayList<String> res = closure(toTest,table);
+								ArrayList<String> res = closure(toTest,leftFD,rightFD);
 								removeDuplicate(res);
 								Collections.sort(res);
 								if(res.equals(attributes)){
@@ -799,25 +830,20 @@ public class DatabaseDependenciesManager
 	* Figures out the closure of a given table for a given set of attribute
 	*
 	* @param attributes 	ArrayList<String>, the set of attribute
-	* @param table 			String, name of the given table
+	* @param lhs 			ArrayList<String>, list of the left-hand sides of the dependencies
+	* @param rhs 			ArrayList<String>, list of the right-hand sides of the dependencies
 	* @return 				ArrayList<String>, closure
 	*/
-	private static ArrayList<String> closure(ArrayList<String> attributes, String table)
+	private static ArrayList<String> closure(ArrayList<String> attributes, ArrayList<String> lhs, ArrayList<String> rhs)
 	{
 		ArrayList<String> unusedLeft = new ArrayList<String>();
 		ArrayList<String> unusedRight = new ArrayList<String>();
 
+		unusedLeft.addAll(lhs);
+		unusedRight.addAll(rhs);
+
 		ArrayList<String> closure = new ArrayList<String>();
 		closure.addAll(attributes);
-
-		for(int i=0; i<table_dep_list.size(); i++)
-		{
-			if(table_dep_list.get(i).equals(table))
-			{
-				unusedLeft.add(lhs_list.get(i));
-				unusedRight.add(rhs_list.get(i));
-			}
-		}
 
 		ArrayList<String> closure_copy = new ArrayList<String>();
 
@@ -831,7 +857,7 @@ public class DatabaseDependenciesManager
 			{
 				for(String uniqueLHS : unusedLeft.get(i).split(" "))
 				{
-					containsLHS = containsLHS && attributes.contains(uniqueLHS);
+					containsLHS = containsLHS && closure.contains(uniqueLHS);
 				}
 
 				if(containsLHS)
