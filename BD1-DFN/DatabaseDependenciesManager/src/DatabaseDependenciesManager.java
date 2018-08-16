@@ -1,7 +1,6 @@
 import java.sql.*;
 import java.io.Console;
 import java.util.*;
-
 /**
 * Class that allows the management of databases and their functional dependencies
 *
@@ -16,7 +15,7 @@ public class DatabaseDependenciesManager
 	private static Statement statement = null;
 	private static ResultSet result = null;
 	private static Console console = System.console();
-	
+
 	/*
 	* Number of dependencies currently in the database
 	*/
@@ -41,8 +40,6 @@ public class DatabaseDependenciesManager
 	* List containing the right-hand side of every dependencies
 	*/
 	private static ArrayList<String> rhs_list = new ArrayList<String>();
-
-
 	public static void main(String[] args)
 	{
 		if(console==null)
@@ -50,33 +47,33 @@ public class DatabaseDependenciesManager
 			System.out.println("Can't access console");
 			System.exit(1);
 		}
-		
+
 		System.out.println("-------- Databases dependencies manager --------");
 		System.out.println("Type 'help' for help");
-		
+
 		while(true)
 		{
 			String commandLine = console.readLine();
 			String[] commandArgs = commandLine.split(" ");
 
 			if(commandArgs[0].equals("") && connection==null){try{connect("../test_DB/test.db");}catch(SQLException sqle){sqle.printStackTrace();}continue;}//testing purpose
-			
+
 			if(commandArgs[0].equals(""))
 			{
 				continue;
 			}
-			
+
 			else if(commandArgs[0].equals("exit") || commandArgs[0].equals("quit"))
 			{
 				System.out.println("bye");
 				System.exit(0);
 			}
-			
+
 			else if(commandArgs[0].equals("help"))
 			{
 				System.out.println(""
 									+"add\n"
-									+"\tHelps adding a dependency\n"			
+									+"\tHelps adding a dependency\n"
 									+"connect [path]\n"
 									+"\tConnects to a database.\n"
 									+"delete\n"
@@ -90,17 +87,22 @@ public class DatabaseDependenciesManager
 									+"sql [command]\n"
 									+"\tExecute an sql command, no output will be shown.\n"
 									+"useless\n"
-									+"\tFinds useless dependencies and allows to delete them\n");
+									+"\tFinds useless dependencies and allows to delete them\n"
+									+"keys\n"
+									+"\tFinds keys and check BCNF/3NF normalisation");
 			}
-			
+
 			else if(connection==null && !commandArgs[0].equals("connect"))
 			{
 				System.out.println("You must connect to a database first");
 				continue;
 			}
-			
+
 			switch(commandArgs[0])
-			{	
+			{
+				case "keys":
+					findKeys();
+					break;
 				case "add":
 					if(commandArgs.length==1)
 					{
@@ -110,7 +112,7 @@ public class DatabaseDependenciesManager
 								String table = selectTable("Which table does the dependency affects ?",false);
 								String lhs = selectAttributes("Which attribute(s) makes the left-hand side of the lhs->rhs dependency ?\nFor multiple arguments, use spaces", table, true);
 								String rhs = selectAttributes("Which attribute makes the right-hand side of the lhs->rhs dependency ?", table, false);
-							
+
 								addDep(table,lhs,rhs);
 							}
 							else
@@ -118,15 +120,15 @@ public class DatabaseDependenciesManager
 								System.out.println("No table to work with");
 								break;
 							}
-						
+
 						}catch(SQLException sqle){
 						}
 					}
 					else
 						System.out.println("Method 'add' requires no arguments");
-					
+
 					break;
-					
+
 				case "connect":
 					if(commandArgs.length==2)
 					{
@@ -139,34 +141,35 @@ public class DatabaseDependenciesManager
 						}
 						System.out.println("Connected");
 					}
-					else 
+					else
 						System.out.println("Invalid number of arguments for method 'connect', please type 'help' to see the correct argumentation");
 					break;
-					
-				
+				case "help":
+					break;
+
 				case "delete":
 					if(ndep>0)
 					{
 						try{
 							String table = selectTable("Which table to delete a dependency from ?",false);
-						
+
 							int[] dep=selectDepNumber(table, true, "Which dependency to delete ?\nFor multiple arguments, use spaces");
 							for(int i=dep.length-1; i>=0; i--)
 							{
 								deleteDep(table_dep_list.remove(dep[i]-1), lhs_list.remove(dep[i]-1), rhs_list.remove(dep[i]-1));
 							}
-						
-						}catch(SQLException sqle){ 
+
+						}catch(SQLException sqle){
 							sqle.printStackTrace();
 						}
 					}
 					else
 						System.out.println("No dependencies to delete");
-					
-					
-					
-					
-					
+
+
+
+
+
 					break;
 				case "disconnect":
 					if(commandArgs.length==1)
@@ -180,11 +183,11 @@ public class DatabaseDependenciesManager
 						if(connection==null)
 							System.out.println("Disconnected");
 					}
-					else 
+					else
 						System.out.println("Method 'disconnect' requires no argument");
-					
+
 					break;
-					
+
 				case "list":
 					try{
 						String table = selectTable("Which table to show dependency from ? Leave blank for showing every dependencies",true);
@@ -194,22 +197,22 @@ public class DatabaseDependenciesManager
 						continue;
 					}
 					break;
-					
+
 				case "logical":
-					
+
 					String useless = "";
 					do{
 						useless = console.readLine("It is advised to delete useless dependencies first, abort ? (y/n) : ").toLowerCase();
 					}while(!useless.equals("y") && !useless.equals("n"));
-					
+
 					if(useless.equals("y"))
 					{
 						continue;
 					}
-					
+
 					findLogicalConsequences();
 					break;
-					
+
 				case "sql":
 					if(commandArgs.length>1)
 					{
@@ -225,6 +228,7 @@ public class DatabaseDependenciesManager
 						System.out.println("Invalid number of arguments for method 'sql', please type 'help' to see the correct argumentation");
 					break;
 
+<<<<<<< HEAD
 				case "uns":
 					if(commandArgs.length==1)
 					{
@@ -235,9 +239,11 @@ public class DatabaseDependenciesManager
 						
 					break;
 					
+=======
+>>>>>>> b9db2f87a7ecd40b6b7ddbfafa8dfdd07c31a041
 				case "useless":
 					if(commandArgs.length==1)
-					{	
+					{
 						ArrayList<Integer> uselessDepIndex = new ArrayList<Integer>();
 						try{
 							 uselessDepIndex = findUselessDep();
@@ -245,28 +251,28 @@ public class DatabaseDependenciesManager
 							System.out.println("Error while figuring out useless dependencies");
 							sqle.printStackTrace();
 						}
-						
-						
+
+
 						if(uselessDepIndex.size()==0)
 						{
 							System.out.println("No useless dependencies found");
 							continue;
 						}
-						
+
 						System.out.println("Useless dependencies found :");
-						
+
 						for(int i=0; i<uselessDepIndex.size(); i++)
 						{
 							System.out.println("> "+table_dep_list.get(uselessDepIndex.get(i))+" : "
 													+lhs_list.get(uselessDepIndex.get(i))+" -> "
 													+rhs_list.get(uselessDepIndex.get(i)));
 						}
-						
+
 						String delete = "";
 						do{
 							delete = console.readLine("Do you want to delete them ? (y/n) : ").toLowerCase();
 						}while(!delete.equals("y") && !delete.equals("n"));
-						
+
 						if(delete.equals("y"))
 						{
 							try{
@@ -280,22 +286,22 @@ public class DatabaseDependenciesManager
 								System.out.println("Couldn't delete dependencies");
 								continue;
 							}
-							
+
 							System.out.println("Useless dependencies deleted");
 						}
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'useless', please type 'help' to see the correct argumentation");
-						
+
 					break;
-					
+
 				default:
 					System.out.println("Unsupported operation, type 'help' to see a list of supported operations");
 			}
-			
+
 		}
 	}
-	
+
 	/**
 	* Connects to a session using username and password.
 	*
@@ -310,7 +316,7 @@ public class DatabaseDependenciesManager
 			do{
 				confirm = console.readLine("A connection is already established, close existent connection ? (y/n) : ").toLowerCase();
 			}while(!confirm.equals("y") && !confirm.equals("n"));
-			
+
 			if(confirm.equals("y"))
 				connection.close();
 			else
@@ -319,7 +325,7 @@ public class DatabaseDependenciesManager
 				return;
 			}
 		}
-		
+
 		connection = DriverManager.getConnection("jdbc:sqlite:"+url);
 		retrieveData();
 	}
@@ -335,8 +341,8 @@ public class DatabaseDependenciesManager
 			connection.close();
 			connection=null;
 		}
-	}	
-	
+	}
+
 	private static void retrieveData()
 	throws SQLException
 	{
@@ -344,13 +350,13 @@ public class DatabaseDependenciesManager
 		table_dep_list.clear();
 		lhs_list.clear();
 		rhs_list.clear();
-		
+
 		checkFuncDepTable();
 
 		DatabaseMetaData dmd = connection.getMetaData();
 		result = dmd.getTables(null, null, "%", null);
-		
-		while(result.next()) 
+
+		while(result.next())
 		{
 			if(result.getString(3).equals("FuncDep"))
 				continue;
@@ -359,9 +365,15 @@ public class DatabaseDependenciesManager
 
 		statement=connection.createStatement();
 		result = statement.executeQuery("SELECT * FROM FuncDep");
+<<<<<<< HEAD
 		
 		while(result.next())
 		{	
+=======
+
+		while(result.next())
+		{
+>>>>>>> b9db2f87a7ecd40b6b7ddbfafa8dfdd07c31a041
 			if(table_name_list.contains(result.getString("table_name")))
 			{
 				table_dep_list.add(result.getString("table_name"));
@@ -373,10 +385,10 @@ public class DatabaseDependenciesManager
 				deleteDep(result.getString("table_name"),result.getString("lhs"),result.getString("rhs"));
 			}
 		}
-		
+
 		ndep=table_dep_list.size();
 	}
-	
+
 	/**
 	* Checks if FuncDep relation exists in a database and creates it if it does not.
 	*/
@@ -391,7 +403,7 @@ public class DatabaseDependenciesManager
 		if(statement!=null)
 			statement.close();
 	}
-	
+
 	/**
 	* Adds a dependency (table, lhs, rhs) in the relation FuncDep.
 	*
@@ -412,16 +424,16 @@ public class DatabaseDependenciesManager
 		lhs_list.add(lhs);
 		rhs_list.add(rhs);
 
-		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  added"); 
+		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  added");
 
 		if(statement!=null)
 			statement.close();
 	}
-	
+
 	/*
 	* Lists dependencies.
 	*
-	* @param table 		String, table 
+	* @param table 		String, table
 	* @param enumerate 	boolean, allows to enumerate the entries of the FuncDep table
 	*/
 	private static void listDep(String table, boolean enumerate)
@@ -448,7 +460,7 @@ public class DatabaseDependenciesManager
 			}
 		}
 	}
-	
+
 	/*
 	* Deletes a dependency.
 	*
@@ -462,10 +474,10 @@ public class DatabaseDependenciesManager
 		checkFuncDepTable();
 		statement=connection.createStatement();
 		statement.executeUpdate("DELETE FROM FuncDep WHERE table_name='"+table+"' AND lhs='"+lhs+"' AND rhs='"+rhs+"'");
-		
+
 		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  deleted");
 	}
-	
+
 	/*
 	* Finds unsatisfied dependencies and allows the user to see and/or delete them.
 	*/
@@ -574,7 +586,7 @@ public class DatabaseDependenciesManager
 			System.out.println("No unsatisfied dependencies found");
 		}
 	}
-	
+
 	/*
 	* Finds logical consequences and allows the user to see them.
 	*/
@@ -593,10 +605,10 @@ public class DatabaseDependenciesManager
 											+"Dependency '"+table_dep_list.get(j)+"' : '"+lhs_list.get(j)+"' -> '"+rhs_list.get(j)+"'\n");
 				}
 			}
-		
+
 		}
 	}
-	
+
 	/*
 	* Finds useless dependencies and allows to delete them.
 	*/
@@ -605,7 +617,7 @@ public class DatabaseDependenciesManager
 	{
 		ArrayList<Integer> UselessDepIndex = new ArrayList<Integer>();
 		ArrayList<String> column_names = new ArrayList<String>();
-		
+
 		for(int i=0; i<table_dep_list.size(); i++)
 		{
 			if(!table_name_list.contains(table_dep_list.get(i)))
@@ -614,43 +626,223 @@ public class DatabaseDependenciesManager
 			{
 				column_names.clear();
 				column_names = listAttributes(table_dep_list.get(i));
-			
+
 				if(!column_names.contains(lhs_list.get(i)) || !column_names.contains(rhs_list.get(i)))
 					UselessDepIndex.add(i);
 				else if(lhs_list.get(i).equals(rhs_list.get(i)))
 					UselessDepIndex.add(i);
 			}
 		}
-		
+
 		return UselessDepIndex;
 	}
-	
+
 	/*
 	* Lists every key or superkey for every relation.
 	*/
 	private static void findKeys()
 	{
-		//TODO
+		ArrayList done = new ArrayList();
+		for (String table : table_dep_list){
+			if(!done.contains(table)){
+				done.add(table);
+				System.out.println("---" + table + "---\n");
+				ArrayList<String> attributes = new ArrayList();
+				ArrayList<String> nlnr = new ArrayList();
+				ArrayList<String> onlyR = new ArrayList();
+				ArrayList<String> onlyL = new ArrayList();
+				ArrayList<String> leftFD = new ArrayList();
+				ArrayList<String> rightFD = new ArrayList();
+				ArrayList<ArrayList> keys = new ArrayList();
+				try{
+					attributes = listAttributes(table);
+				}catch(SQLException sqle){
+					sqle.printStackTrace();
+					System.out.println("Can't ");
+					continue;
+				}
+				Collections.sort(attributes);
+				System.out.println("Complete attribute(s) set: " + attributes);
+				nlnr.addAll(attributes);
+				for(int i=0; i<table_dep_list.size(); i++){   //make nlnr array with attributes not on left nor on right
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							leftFD.add(lhs_list.get(j));
+							for(String f : lhs_list.get(j).split(" ")){
+								onlyL.add(f);
+								removeDuplicate(onlyL);
+							}
+						}
+					}
+					for(int j=0; j<rhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							rightFD.add(rhs_list.get(j));
+							onlyR.add(rhs_list.get(j));
+							removeDuplicate(onlyR);
+						}
+					}
+				}
+				for(int i=0; i<table_dep_list.size(); i++){   //Now we remove
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							for(String f : lhs_list.get(j).split(" ")){
+								nlnr.remove(f);
+							}
+						}
+					}
+					for(int j=0; j<rhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							nlnr.remove(rhs_list.get(j));
+							onlyL.remove(rhs_list.get(j));
+						}
+					}
+					for(int j=0; j<lhs_list.size(); j++){
+						if(i == j && table_dep_list.get(i).equals(table)){
+							for(String f : lhs_list.get(j).split(" ")){
+								onlyR.remove(f);
+							}
+						}
+					}
+				}
+				removeDuplicate(nlnr);
+				removeDuplicate(onlyR);
+				removeDuplicate(onlyL);
+				Collections.sort(nlnr);
+				Collections.sort(onlyR);
+				Collections.sort(onlyL);
+				System.out.println("Step 1 Attribute(s) not on left nor on right: " + nlnr);
+				System.out.println("Step 2 Attribute(s) only on right: " +onlyR);
+				System.out.println("Step 3 Attribute(s) only on left: " +onlyL);
+				ArrayList<String> step4 = new ArrayList();
+				step4.addAll(nlnr);
+				step4.addAll(onlyL);
+				removeDuplicate(step4);
+				Collections.sort(step4);
+				System.out.println("Step 4 combine attribute(s) on step 1 and 3: " + step4);
+				ArrayList<String> step5 = closure(step4, leftFD, rightFD);
+				removeDuplicate(step5);
+				Collections.sort(step5);
+				System.out.println("Step 5 closure of the attribute(s) on step 4: " + step5);
+				if(step5.equals(attributes)){
+					keys.add(step4);
+					System.out.println("Step 6 closure of step 5 give us all attribute --> keys: " + keys);
+				}
+				else{
+					ArrayList<String> step6 = new ArrayList();
+					step6.addAll(attributes);
+					for(String attr : step4){
+						step6.remove(attr);
+					}
+					for(String attr : onlyR){
+						step6.remove(attr);
+					}
+					System.out.println("Step 6 Find attributes not included in step 4 and 2: " + step6);
+					System.out.println("Step 7 Test closures of attributes on step 4 + one attribute in step 6 one at a time:\n");
+					ArrayList<String> toTest = new ArrayList();
+					toTest.addAll(step4);
+					boolean candidateFound = false;
+					int attrToAdd = 1;
+					while(!candidateFound){
+						if(attrToAdd == 1 ){
+							for(String toAdd : step6){
+								toTest.add(toAdd);
+								ArrayList<String> res = closure(toTest,leftFD,rightFD);
+								removeDuplicate(res);
+								Collections.sort(res);
+								if(res.equals(attributes)){
+									ArrayList<String> copy = new ArrayList();
+									copy.addAll(toTest);
+									keys.add(copy);
+									System.out.println("--- Key found ! " + copy);
+
+									candidateFound = true;
+								}
+								toTest.clear();
+								toTest.addAll(step4);
+							}
+							attrToAdd++;
+						}
+						else{
+							System.out.println("TO DO");
+							candidateFound = true;
+						}
+					}
+				}
+				removeDuplicate(keys);
+				System.out.println("The candidate keys are: " + keys);
+				System.out.println();
+				System.out.println("--- BCNF ---: " + isBCNF(leftFD,keys));
+				System.out.println("--- 3NF ---: " + is3NF(leftFD,rightFD,keys));
+				System.out.println();
+			}
+		}
 	}
-	
+
+
+	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD){
+		ArrayList<String> res = new ArrayList();
+		res.addAll(attr);
+		ArrayList<String> newRes = new ArrayList();
+		newRes.addAll(res);
+		boolean modified = true;
+		while(modified){
+			modified = false;
+			for(int i = 0; i < leftFD.size(); i++){
+				ArrayList<String> left = new ArrayList();
+				for(String toAdd : leftFD.get(i).split(" ")){
+					left.add(toAdd);
+				}
+				boolean contains = true;
+				for(String test : left){
+					if(!res.contains(test)){
+						contains = false;
+					}
+				}
+				if(contains){
+					newRes.add(rightFD.get(i));
+					if(res.size() != newRes.size()){
+						modified = true;
+						res = newRes;
+					}
+				}
+			}
+		}
+		return res;
+	}
+	private static void removeDuplicate(ArrayList input){
+		Set<String> noDuplicate = new LinkedHashSet<String>(input);
+		input.clear();
+		input.addAll(noDuplicate);
+	}
+
 	/*
 	* Checks if the database respects BCNF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
-	private static boolean isBCNF()
+	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
 	{
-		//TODO
-		return false;
+		for(String toTest : leftFD){
+			if(!keys.contains(toTest))
+				return false;
+		}
+		return true;
 	}
-	
+
 	/*
 	* Checks if the database respects 3NF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
-	private static boolean is3NF()
+	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
-		//TODO
-		return false;
+		for(int i = 0;i < leftFD.size(); i++){
+			if(!keys.contains((String)leftFD.get(i)))
+			for(ArrayList<String> key :  keys ){
+				if(!key.contains((String)rightFD.get(i))){
+					return false;
+				}
+			}
+		}
+		return true;
 	}
-	
+
 	/*
 	*
 	*/
@@ -658,7 +850,7 @@ public class DatabaseDependenciesManager
 	{
 		//TODO
 	}
-	
+
 	/*
 	* Executes an SQL statement
 	*
@@ -669,13 +861,13 @@ public class DatabaseDependenciesManager
 	{
 		statement = connection.createStatement();
 		statement.execute(request);
-		
+
 		if(statement!=null)
 			statement.close();
-			
+
 		retrieveData();
 	}
-	
+
 	/**
 	* Selects a table in the current database using index
 	*
@@ -690,7 +882,7 @@ public class DatabaseDependenciesManager
 		int nb=0;
 
 		System.out.println(message);
-		
+
 		for(int i=0; i<table_name_list.size(); i++)
 		{
 			System.out.println("("+(i+1)+") "+table_name_list.get(i));
@@ -724,7 +916,7 @@ public class DatabaseDependenciesManager
 
 		return table_name;
 	}
-	
+
 	/**
 	* Selects some attributes of a given table
 	*
@@ -740,7 +932,7 @@ public class DatabaseDependenciesManager
 		boolean done = false;
 
 		System.out.println(message);
-		
+
 		ArrayList<String> table_attributes = listAttributes(table);
 
 		for(int i=0; i<table_attributes.size(); i++)
@@ -754,7 +946,7 @@ public class DatabaseDependenciesManager
 			String in = console.readLine();
 
 			if(in.equals(""))
-			{	
+			{
 				continue;
 			}
 
@@ -803,26 +995,26 @@ public class DatabaseDependenciesManager
 
 		return attributes;
 	}
-	
+
 	/**
 	* Lists attribute of a given table
 	*
 	* @param table 	String, name of the table
-	* @return 		ArrayList<String> containing the attributes' name 
+	* @return 		ArrayList<String> containing the attributes' name
 	*/
 	private static ArrayList<String> listAttributes(String table)
 	throws SQLException
 	{
 		ArrayList<String> attributes = new ArrayList<String>();
-							
+
 		result = statement.executeQuery("SELECT * FROM "+table);
 		ResultSetMetaData metadata = result.getMetaData();
-	
+
 		for (int i=1; i<=metadata.getColumnCount(); i++)
 		{
 			attributes.add(metadata.getColumnName(i));
 		}
-		
+
 		return attributes;
 	}
 
@@ -831,7 +1023,7 @@ public class DatabaseDependenciesManager
 	*
 	* @param table 		String, name of the table
 	* @param multiple 	Boolean, true allows for multiple selection
-	* @param message 	String, message to be displayed before the selection 
+	* @param message 	String, message to be displayed before the selection
 	* @return 			int[] containing the indexes
 	*
 	*/
@@ -887,7 +1079,7 @@ public class DatabaseDependenciesManager
 		{
 			ret[i]=(int)depNumber.get(i);
 		}
-		
+
 		return ret;
 	}
 }
