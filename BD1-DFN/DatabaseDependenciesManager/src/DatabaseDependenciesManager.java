@@ -80,16 +80,18 @@ public class DatabaseDependenciesManager
 									+"\tHelps deleteting a dependency\n"
 									+"disconnect\n"
 									+"\tDisconnects from current database\n"
+									+"keys\n"
+									+"\tFinds keys and check BCNF/3NF normalisation\n"
 									+"list [table]\n"
 									+"\tLists dependencies associated to current database.\n"
 									+"quit\n"
 									+"\tQuits application.\n"
 									+"sql [command]\n"
 									+"\tExecute an sql command, no output will be shown.\n"
+									+"uns\n"
+									+"\tFinds unsatisfied dependencies and allows to delete them or the bad tuples.\n"
 									+"useless\n"
-									+"\tFinds useless dependencies and allows to delete them\n"
-									+"keys\n"
-									+"\tFinds keys and check BCNF/3NF normalisation");
+									+"\tFinds useless dependencies and allows to delete them.");
 			}
 
 			else if(connection==null && !commandArgs[0].equals("connect"))
@@ -485,6 +487,8 @@ public class DatabaseDependenciesManager
 				String attributes="";
 				String condition="";
 				String tuple="";
+				String lhs="";
+				String rhs="";
 
 				if(table_dep_list.get(i).equals(table))
 				{
@@ -492,8 +496,8 @@ public class DatabaseDependenciesManager
 					condition="WHERE ";
 					tuple="(";
 
-					String lhs=lhs_list.get(i);
-					String rhs=rhs_list.get(i);
+					lhs=lhs_list.get(i);
+					rhs=rhs_list.get(i);
 
 					for(String uniqueLHS : lhs.split(" "))
 					{
@@ -524,7 +528,7 @@ public class DatabaseDependenciesManager
 						{
 							result_not_empty=true;
 							found=true;
-							System.out.println("Tuples :");
+							System.out.println("\nTuples :");
 						}
 
 						System.out.print("(");
@@ -565,6 +569,24 @@ public class DatabaseDependenciesManager
 							System.out.println("Row(s) deleted");
 						}catch(SQLException sqle){
 							System.out.println("Unable to delete row(s)");
+						}
+					}
+					else
+					{
+						System.out.println("Delete dependency ? (y/n)");
+						delete = "";
+						do{
+							delete = console.readLine().toLowerCase();
+						}while(!delete.equals("y") && !delete.equals("n"));
+
+						if(delete.equals("y"))
+						{
+							try
+							{
+								deleteDep(table, lhs, rhs);
+							}catch(SQLException sqle){
+								System.out.println("Unable to delete dependency");
+							}
 						}
 					}
 					result_not_empty=false;
