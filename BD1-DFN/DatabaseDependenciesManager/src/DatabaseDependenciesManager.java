@@ -16,27 +16,27 @@ public class DatabaseDependenciesManager
 	private static ResultSet result = null;
 	private static Console console = System.console();
 
-	/*
+	/**
 	* Number of dependencies currently in the database
 	*/
 	private static int ndep = 0;
 
-	/*
+	/**
 	* List containing the name of the table within the database
 	*/
 	private static ArrayList<String> table_name_list = new ArrayList<String>();
 
-	/*
+	/**
 	* List containing the table affected by each dependencies
 	*/
 	private static ArrayList<String> table_dep_list = new ArrayList<String>();
 
-	/*
+	/**
 	* List containing the left-hand side of every dependencies
 	*/
 	private static ArrayList<String> lhs_list = new ArrayList<String>();
 
-	/*
+	/**
 	* List containing the right-hand side of every dependencies
 	*/
 	private static ArrayList<String> rhs_list = new ArrayList<String>();
@@ -626,7 +626,7 @@ public class DatabaseDependenciesManager
 	}
 
 	/**
-	* Lists every key or superkey for every relation.
+	* Lists every key or superkey for every relation and check for BCNF an 3NF compliancy.
 	*/
 	private static void findKeys()
 	{
@@ -770,7 +770,17 @@ public class DatabaseDependenciesManager
 			}
 		}
 	}
-
+	/**
+	 *  Calculate every combination possible using this function recursively.
+	 * @param arr String[], input array.
+	 * @param data String[], array used for the recursion.
+	 * @param start int, start index in arr.
+	 * @param end int, end index in arr.
+	 * @param index int, current index in data.
+	 * @param r int, size of a combination to be saved in res.
+	 * @param res ArrayList<String>, ArrayList where the result is going to be saved.
+	 *
+	 */
 	private static void combinationUtil(String[] arr, String[] data, int start,
                                 int end, int index, int r, ArrayList<String> res)
     {
@@ -797,7 +807,13 @@ public class DatabaseDependenciesManager
 			}
 
 
-
+	/**
+	 * Calculate the closure of a set of attributes.
+	 * @param attr ArrayList<String>, the set of attributes.
+	 * @param leftFD ArrayList<String>, left part of the functional dependencies.
+	 * @param rightFD ArrayList<String>, right part of the functional dependencies.
+	 * @return ArrayList<String>, the closure asked.
+	 */
 	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD){
 		ArrayList<String> res = new ArrayList();
 		res.addAll(attr);
@@ -828,6 +844,10 @@ public class DatabaseDependenciesManager
 		}
 		return res;
 	}
+	/**
+	 * Remove duplicates in the given Arraylist.
+	 * @param input ArrayList, given ArrayList.
+	 */
 	private static void removeDuplicate(ArrayList input){
 		Set<String> noDuplicate = new LinkedHashSet<String>(input);
 		input.clear();
@@ -836,6 +856,9 @@ public class DatabaseDependenciesManager
 
 	/**
 	* Checks if the database respects BCNF normalisation. If not, finds the relations that do not respect the normalisation.
+	* @param leftFD ArrayList<String>, left part of the functional dependencies.
+	* @param keys ArrayList, keys of the concerned table.
+	* @return boolean, true if the table is BCNF compliant.
 	*/
 	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
 	{
@@ -852,6 +875,10 @@ public class DatabaseDependenciesManager
 
 	/**
 	* Checks if the database respects 3NF normalisation. If not, finds the relations that do not respect the normalisation.
+	* @param leftFD ArrayList<String>, left part of the functional dependencies.
+	* @param rightFD ArrayList<String>, right part of the functional dependencies.
+	* @param keys ArrayList, keys of the concerned table.
+	* @return boolean, true if the table is 3NF compliant.
 	*/
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
@@ -876,7 +903,7 @@ public class DatabaseDependenciesManager
 		return true;
 	}
 
-	/*
+	/**
 	*
 	*/
 	private static void exportTo3NF()
