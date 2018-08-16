@@ -100,9 +100,6 @@ public class DatabaseDependenciesManager
 
 			switch(commandArgs[0])
 			{
-				case "keys":
-					findKeys();
-					break;
 				case "add":
 					if(commandArgs.length==1)
 					{
@@ -144,8 +141,6 @@ public class DatabaseDependenciesManager
 					else
 						System.out.println("Invalid number of arguments for method 'connect', please type 'help' to see the correct argumentation");
 					break;
-				case "help":
-					break;
 
 				case "delete":
 					if(ndep>0)
@@ -186,6 +181,10 @@ public class DatabaseDependenciesManager
 					else
 						System.out.println("Method 'disconnect' requires no argument");
 
+					break;
+
+				case "keys":
+					findKeys();
 					break;
 
 				case "list":
@@ -886,7 +885,6 @@ public class DatabaseDependenciesManager
 					for(String temp1 : rightFD.get(i).split(" ")){
 						temp.add(temp1);
 					}
-					System.out.println(temp);
 					if(!key.contains(temp)){
 						return false;
 					}
