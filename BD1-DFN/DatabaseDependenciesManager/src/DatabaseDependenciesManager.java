@@ -217,11 +217,22 @@ public class DatabaseDependenciesManager
 							executeSQL(commandLine.substring(commandLine.indexOf(" "),commandLine.length()));
 							System.out.println("Applied");
 						}catch(SQLException sqle){
+							sqle.printStackTrace();
 							System.out.println("Unable to aplly SQL request");
 						}
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'sql', please type 'help' to see the correct argumentation");
+					break;
+
+				case "uns":
+					if(commandArgs.length==1)
+					{
+						findUnsatisfiedDep();
+					}
+					else
+						System.out.println("Invalid number of arguments for method 'uns', please type 'help' to see the correct argumentation");
+						
 					break;
 					
 				case "useless":
@@ -349,7 +360,7 @@ public class DatabaseDependenciesManager
 		statement=connection.createStatement();
 		result = statement.executeQuery("SELECT * FROM FuncDep");
 		
-		while(result.next()) 
+		while(result.next())
 		{	
 			if(table_name_list.contains(result.getString("table_name")))
 			{
@@ -460,7 +471,108 @@ public class DatabaseDependenciesManager
 	*/
 	private static void findUnsatisfiedDep()
 	{
-		//TODO
+		boolean found=false;
+
+		for(String table : table_name_list)
+		{
+			if(table.equals("FuncDep"))
+				continue;
+
+			for(int i=0; i<table_dep_list.size(); i++)
+			{
+				String attributes="";
+				String condition="";
+				String tuple="";
+
+				if(table_dep_list.get(i).equals(table))
+				{
+					attributes="";
+					condition="WHERE ";
+					tuple="(";
+
+					String lhs=lhs_list.get(i);
+					String rhs=rhs_list.get(i);
+
+					for(String uniqueLHS : lhs.split(" "))
+					{
+						attributes+= ("A."+uniqueLHS+", ");
+						condition+= ("A."+uniqueLHS+" = B."+uniqueLHS+" AND ");
+						tuple+= (uniqueLHS+",");
+					}
+
+					attributes+= ("A."+rhs);
+					condition+= ("A."+rhs+" <> B."+rhs);
+					tuple+= (rhs+")");
+				}
+				//System.out.println("SELECT "+attributes+" FROM "+table+" A,"+table+" B "+condition);
+				String query = "SELECT "+attributes+" FROM "+table+" A,"+table+" B "+condition;
+				boolean result_not_empty=false;
+
+				try
+				{
+					statement = connection.createStatement();
+					result = statement.executeQuery(query);
+
+					ResultSetMetaData rsmd = result.getMetaData();
+					int columnsNumber = rsmd.getColumnCount();
+
+					while (result.next())
+					{
+						if(!result_not_empty)
+						{
+							result_not_empty=true;
+							found=true;
+							System.out.println("Tuples :");
+						}
+
+						System.out.print("(");
+						for(int j=1; j<=columnsNumber; j++)
+						{
+							if(j>1 && j<columnsNumber)
+							{
+								System.out.print(", ");
+							}
+							else if(j==columnsNumber)
+							{
+								System.out.print(" -> ");
+							}
+							System.out.print(rsmd.getColumnName(j)+":"+result.getString(j));
+						}
+						System.out.println(")");
+					}
+
+				}catch (SQLException sqle){
+					sqle.printStackTrace();
+				}
+
+				if(result_not_empty)
+				{
+					System.out.println("from table '"+table+"' do not satisfy the dependency '"+lhs_list.get(i)+" -> "+rhs_list.get(i)+"', delete them ? (y/n)");
+					
+					String delete = "";
+					do{
+						delete = console.readLine().toLowerCase();
+					}while(!delete.equals("y") && !delete.equals("n"));
+
+					if(delete.equals("y"))
+					{
+						String deleteQuery=("DELETE FROM "+table+" WHERE "+tuple+" IN ("+query+");");
+						//System.out.println(deleteQuery);
+						try{
+							statement.execute(deleteQuery);
+							System.out.println("Row(s) deleted");
+						}catch(SQLException sqle){
+							System.out.println("Unable to delete row(s)");
+						}
+					}
+					result_not_empty=false;
+				}
+			}
+		}
+		if(!found)
+		{
+			System.out.println("No unsatisfied dependencies found");
+		}
 	}
 	
 	/*
