@@ -878,16 +878,21 @@ public class DatabaseDependenciesManager
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
 		for(int i = 0;i < leftFD.size(); i++){
-			if(!isBCNF(leftFD,keys)){
+			ArrayList<String> temp2 = new ArrayList();
+			for(String temp4 : leftFD.get(i).split(" ")){
+				temp2.add(temp4);
+			}
+			if(!keys.contains(temp2)){
+				boolean ok = false;
 				for(ArrayList<String> key :  keys ){
-					ArrayList<String> temp = new ArrayList();
+					if(key.contains(rightFD.get(i))){
+						System.out.println("OK");
+						ok = true;
+					}
 
-					for(String temp1 : rightFD.get(i).split(" ")){
-						temp.add(temp1);
-					}
-					if(!key.contains(temp)){
-						return false;
-					}
+				}
+				if(!ok){
+					return false;
 				}
 			}
 		}
