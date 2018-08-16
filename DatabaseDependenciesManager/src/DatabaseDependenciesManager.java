@@ -771,16 +771,17 @@ public class DatabaseDependenciesManager
 		}
 	}
 	/**
-	 *  Calculate every combination possible using this function recursively.
-	 * @param arr String[], input array.
-	 * @param data String[], array used for the recursion.
-	 * @param start int, start index in arr.
-	 * @param end int, end index in arr.
-	 * @param index int, current index in data.
-	 * @param r int, size of a combination to be saved in res.
-	 * @param res ArrayList<String>, ArrayList where the result is going to be saved.
-	 *
-	 */
+	* figures out every combination possible using this function recursively.
+	*
+	* @param arr 	String[], input array.
+	* @param data 	String[], array used for the recursion.
+	* @param start 	int, start index in arr.
+	* @param end 	int, end index in arr.
+	* @param index 	int, current index in data.
+	* @param r 		int, size of a combination to be saved in res.
+	* @param res 	ArrayList<String>, ArrayList where the result is going to be saved.
+	*
+	*/
 	private static void combinationUtil(String[] arr, String[] data, int start,
                                 int end, int index, int r, ArrayList<String> res)
     {
@@ -789,7 +790,9 @@ public class DatabaseDependenciesManager
 				{
 					String temp = "";
 					for (int j=0; j<r; j++)
+					{
 						temp += data[j];
+					}
 					res.add(temp);
 					temp = "";
 					return;
@@ -808,34 +811,43 @@ public class DatabaseDependenciesManager
 
 
 	/**
-	 * Calculate the closure of a set of attributes.
-	 * @param attr ArrayList<String>, the set of attributes.
-	 * @param leftFD ArrayList<String>, left part of the functional dependencies.
-	 * @param rightFD ArrayList<String>, right part of the functional dependencies.
-	 * @return ArrayList<String>, the closure asked.
-	 */
-	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD){
+	* Calculate the closure of a set of attributes.
+	*
+	* @param attr 		ArrayList<String>, the set of attributes.
+	* @param leftFD 	ArrayList<String>, left part of the functional dependencies.
+	* @param rightFD 	ArrayList<String>, right part of the functional dependencies.
+	* @return 			ArrayList<String>, the closure asked.
+	*/
+	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD)
+	{
 		ArrayList<String> res = new ArrayList();
 		res.addAll(attr);
 		ArrayList<String> newRes = new ArrayList();
 		newRes.addAll(res);
 		boolean modified = true;
-		while(modified){
+		while(modified)
+		{
 			modified = false;
-			for(int i = 0; i < leftFD.size(); i++){
+			for(int i = 0; i < leftFD.size(); i++)
+			{
 				ArrayList<String> left = new ArrayList();
-				for(String toAdd : leftFD.get(i).split(" ")){
+				for(String toAdd : leftFD.get(i).split(" "))
+				{
 					left.add(toAdd);
 				}
 				boolean contains = true;
-				for(String test : left){
-					if(!res.contains(test)){
+				for(String test : left)
+				{
+					if(!res.contains(test))
+					{
 						contains = false;
 					}
 				}
-				if(contains){
+				if(contains)
+				{
 					newRes.add(rightFD.get(i));
-					if(res.size() != newRes.size()){
+					if(res.size() != newRes.size())
+					{
 						modified = true;
 						res = newRes;
 					}
@@ -845,26 +857,31 @@ public class DatabaseDependenciesManager
 		return res;
 	}
 	/**
-	 * Remove duplicates in the given Arraylist.
-	 * @param input ArrayList, given ArrayList.
-	 */
-	private static void removeDuplicate(ArrayList input){
+	* Remove duplicates in the given Arraylist.
+	*
+	* @param input 	 ArrayList, given ArrayList.
+	*/
+	private static void removeDuplicate(ArrayList input)
+	{
 		Set<String> noDuplicate = new LinkedHashSet<String>(input);
 		input.clear();
 		input.addAll(noDuplicate);
 	}
 
 	/**
-	* Checks if the database respects BCNF normalisation. If not, finds the relations that do not respect the normalisation.
-	* @param leftFD ArrayList<String>, left part of the functional dependencies.
-	* @param keys ArrayList, keys of the concerned table.
-	* @return boolean, true if the table is BCNF compliant.
+	* Checks if the database respects BCNF normalisation.
+	*
+	* @param leftFD 	ArrayList<String>, left part of the functional dependencies.
+	* @param keys 		ArrayList, keys of the concerned table.
+	* @return 			boolean, true if the table is BCNF compliant.
 	*/
 	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
 	{
-		for(String toTest : leftFD){
+		for(String toTest : leftFD)
+		{
 			ArrayList<String> temp = new ArrayList();
-			for(String temp1 : toTest.split(" ")){
+			for(String temp1 : toTest.split(" "))
+			{
 				temp.add(temp1);
 			}
 			if(!keys.contains(temp))
@@ -874,28 +891,35 @@ public class DatabaseDependenciesManager
 	}
 
 	/**
-	* Checks if the database respects 3NF normalisation. If not, finds the relations that do not respect the normalisation.
-	* @param leftFD ArrayList<String>, left part of the functional dependencies.
-	* @param rightFD ArrayList<String>, right part of the functional dependencies.
-	* @param keys ArrayList, keys of the concerned table.
-	* @return boolean, true if the table is 3NF compliant.
+	* Checks if the database respects 3NF normalisation.
+	*
+	* @param leftFD 	ArrayList<String>, left part of the functional dependencies.
+	* @param rightFD 	ArrayList<String>, right part of the functional dependencies.
+	* @param keys 		ArrayList, keys of the concerned table.
+	* @return 			boolean, true if the table is 3NF compliant.
 	*/
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
-		for(int i = 0;i < leftFD.size(); i++){
+		for(int i = 0;i < leftFD.size(); i++)
+		{
 			ArrayList<String> temp2 = new ArrayList();
-			for(String temp4 : leftFD.get(i).split(" ")){
+			for(String temp4 : leftFD.get(i).split(" "))
+			{
 				temp2.add(temp4);
 			}
-			if(!keys.contains(temp2)){
+			if(!keys.contains(temp2))
+			{
 				boolean ok = false;
-				for(ArrayList<String> key :  keys ){
-					if(key.contains(rightFD.get(i))){
+				for(ArrayList<String> key :  keys )
+				{
+					if(key.contains(rightFD.get(i)))
+					{
 						ok = true;
 					}
 
 				}
-				if(!ok){
+				if(!ok)
+				{
 					return false;
 				}
 			}
