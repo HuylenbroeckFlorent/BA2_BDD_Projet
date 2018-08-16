@@ -87,7 +87,9 @@ public class DatabaseDependenciesManager
 									+"sql [command]\n"
 									+"\tExecute an sql command, no output will be shown.\n"
 									+"useless\n"
-									+"\tFinds useless dependencies and allows to delete them\n");
+									+"\tFinds useless dependencies and allows to delete them\n"
+									+"keys\n"
+									+"\tFinds keys and check BCNF/3NF normalisation");
 			}
 
 			else if(connection==null && !commandArgs[0].equals("connect"))
@@ -142,7 +144,8 @@ public class DatabaseDependenciesManager
 					else
 						System.out.println("Invalid number of arguments for method 'connect', please type 'help' to see the correct argumentation");
 					break;
-
+				case "help":
+					break;
 
 				case "delete":
 					if(ndep>0)
