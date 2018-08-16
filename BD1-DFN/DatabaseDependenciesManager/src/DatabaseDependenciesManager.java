@@ -296,6 +296,9 @@ public class DatabaseDependenciesManager
 		}
 	}
 
+	/**
+	* Retrieve data from the database's FuncDep relation and reads table names
+	*/
 	private static void retrieveData()
 	throws SQLException
 	{
@@ -377,7 +380,7 @@ public class DatabaseDependenciesManager
 			statement.close();
 	}
 
-	/*
+	/**
 	* Lists dependencies.
 	*
 	* @param table 		String, table
@@ -563,7 +566,7 @@ public class DatabaseDependenciesManager
 		}
 	}
 
-	/*
+	/**
 	* Finds logical consequences and allows the user to see them.
 	*/
 	private static void findLogicalConsequences()
@@ -585,7 +588,7 @@ public class DatabaseDependenciesManager
 		}
 	}
 
-	/*
+	/**
 	* Finds useless dependencies and allows to delete them.
 	*/
 	private static void findUselessDep()
@@ -831,7 +834,7 @@ public class DatabaseDependenciesManager
 		input.addAll(noDuplicate);
 	}
 
-	/*
+	/**
 	* Checks if the database respects BCNF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
 	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
@@ -847,7 +850,7 @@ public class DatabaseDependenciesManager
 		return true;
 	}
 
-	/*
+	/**
 	* Checks if the database respects 3NF normalisation. If not, finds the relations that do not respect the normalisation.
 	*/
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
@@ -881,10 +884,10 @@ public class DatabaseDependenciesManager
 		//TODO
 	}
 
-	/*
+	/**
 	* Executes an SQL statement
 	*
-	* @arg statement 	String, SQL request to execute
+	* @param statement 	String, SQL request to execute
 	*/
 	private static void executeSQL(String request)
 	throws SQLException
@@ -1113,13 +1116,19 @@ public class DatabaseDependenciesManager
 		return ret;
 	}
 
+	/**
+	* Reads a console input until it's "y" or "n"
+	*
+	* @param message 	String, message to be displayed before reading the answer
+	* @return 			String, answer to the message
+	*/
 	private static String readYesOrNo(String message)
 	{
-		System.out.println(message);
+		String answer = console.readLine(message).toLowerCase();
 		
 		while(!answer.equals("y") && !answer.equals("n"))
 		{
-			answer = String answer = console.readLine("invalid answer").toLowerCase();
+			answer = console.readLine("invalid answer").toLowerCase();
 		}
 
 		return answer;
