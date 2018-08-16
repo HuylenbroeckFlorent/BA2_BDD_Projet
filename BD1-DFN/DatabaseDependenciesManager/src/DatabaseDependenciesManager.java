@@ -81,8 +81,8 @@ public class DatabaseDependenciesManager
 									+"disconnect\n"
 									+"\tDisconnects from current database\n"
 									+"keys\n"
-									+"\tFinds keys and check BCNF/3NF normalisation\n"
-									+"list [table]\n"
+									+"\tFinds keys and checks BCNF/3NF normalisation\n"
+									+"list\n"
 									+"\tLists dependencies associated to current database.\n"
 									+"quit\n"
 									+"\tQuits application.\n"
@@ -151,9 +151,14 @@ public class DatabaseDependenciesManager
 							String table = selectTable("Which table to delete a dependency from ?",false);
 
 							int[] dep=selectDepNumber(table, true, "Which dependency to delete ?\nFor multiple arguments, use spaces");
+							if(dep.length==0)
+							{
+								System.out.println("Aborted");
+								continue;
+							}
 							for(int i=dep.length-1; i>=0; i--)
 							{
-								deleteDep(table_dep_list.remove(dep[i]-1), lhs_list.remove(dep[i]-1), rhs_list.remove(dep[i]-1));
+								deleteDep(dep[i]-1);
 							}
 
 						}catch(SQLException sqle){
@@ -191,7 +196,7 @@ public class DatabaseDependenciesManager
 
 				case "list":
 					try{
-						String table = selectTable("Which table to show dependency from ? Leave blank for showing every dependencies",true);
+						String table = selectTable("Which table to show dependency from ? Leave blank to show every dependencies",true);
 						listDep(table,false);//TODO
 					}catch(SQLException sqle){
 						System.out.println("Error"); //TODO
@@ -201,10 +206,7 @@ public class DatabaseDependenciesManager
 
 				case "logical":
 
-					String useless = "";
-					do{
-						useless = console.readLine("It is advised to delete useless dependencies first, abort ? (y/n) : ").toLowerCase();
-					}while(!useless.equals("y") && !useless.equals("n"));
+					String useless=readYesOrNo("It is advised to delete useless dependencies first, abort ? (y/n) : ");
 
 					if(useless.equals("y"))
 					{
@@ -242,51 +244,7 @@ public class DatabaseDependenciesManager
 				case "useless":
 					if(commandArgs.length==1)
 					{
-						ArrayList<Integer> uselessDepIndex = new ArrayList<Integer>();
-						try{
-							 uselessDepIndex = findUselessDep();
-						}catch(SQLException sqle){
-							System.out.println("Error while figuring out useless dependencies");
-							sqle.printStackTrace();
-						}
-
-
-						if(uselessDepIndex.size()==0)
-						{
-							System.out.println("No useless dependencies found");
-							continue;
-						}
-
-						System.out.println("Useless dependencies found :");
-
-						for(int i=0; i<uselessDepIndex.size(); i++)
-						{
-							System.out.println("> "+table_dep_list.get(uselessDepIndex.get(i))+" : "
-													+lhs_list.get(uselessDepIndex.get(i))+" -> "
-													+rhs_list.get(uselessDepIndex.get(i)));
-						}
-
-						String delete = "";
-						do{
-							delete = console.readLine("Do you want to delete them ? (y/n) : ").toLowerCase();
-						}while(!delete.equals("y") && !delete.equals("n"));
-
-						if(delete.equals("y"))
-						{
-							try{
-								for(int i=uselessDepIndex.size()-1; i>=0; i--)
-								{
-									deleteDep(table_dep_list.remove((int)uselessDepIndex.get(i)),
-												lhs_list.remove((int)uselessDepIndex.get(i)),
-												rhs_list.remove((int)uselessDepIndex.get(i)));
-								}
-							}catch(SQLException sqle2){
-								System.out.println("Couldn't delete dependencies");
-								continue;
-							}
-
-							System.out.println("Useless dependencies deleted");
-						}
+						findUselessDep();
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'useless', please type 'help' to see the correct argumentation");
@@ -310,10 +268,7 @@ public class DatabaseDependenciesManager
 	{
 		if(connection!=null)
 		{
-			String confirm="";
-			do{
-				confirm = console.readLine("A connection is already established, close existent connection ? (y/n) : ").toLowerCase();
-			}while(!confirm.equals("y") && !confirm.equals("n"));
+			String confirm=readYesOrNo("A connection is already established, close existent connection ? (y/n) : ");
 
 			if(confirm.equals("y"))
 				connection.close();
@@ -453,7 +408,7 @@ public class DatabaseDependenciesManager
 		}
 	}
 
-	/*
+	/**
 	* Deletes a dependency.
 	*
 	* @param table 	String, table affected by the dependency to delete
@@ -470,7 +425,25 @@ public class DatabaseDependenciesManager
 		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  deleted");
 	}
 
-	/*
+	/**
+	* Deletes a dependency using its index
+	*
+	* @param i 	int, index of the dependency
+	*/
+
+	private static void deleteDep(int i)
+	throws SQLException
+	{
+		checkFuncDepTable();
+		statement=connection.createStatement();
+		statement.executeUpdate("DELETE FROM FuncDep WHERE table_name='"+table_dep_list.get(i)+"' AND lhs='"+lhs_list.get(i)+"' AND rhs='"+rhs_list.get(i)+"'");
+		System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"'  deleted");
+		table_dep_list.remove(i);
+		lhs_list.remove(i);
+		rhs_list.remove(i);
+	}
+
+	/**
 	* Finds unsatisfied dependencies and allows the user to see and/or delete them.
 	*/
 	private static void findUnsatisfiedDep()
@@ -482,7 +455,7 @@ public class DatabaseDependenciesManager
 			if(table.equals("FuncDep"))
 				continue;
 
-			for(int i=0; i<table_dep_list.size(); i++)
+			for(int i=table_dep_list.size()-1; i>=0; i--)
 			{
 				String attributes="";
 				String condition="";
@@ -553,12 +526,7 @@ public class DatabaseDependenciesManager
 
 				if(result_not_empty)
 				{
-					System.out.println("from table '"+table+"' do not satisfy the dependency '"+lhs_list.get(i)+" -> "+rhs_list.get(i)+"', delete them ? (y/n)");
-
-					String delete = "";
-					do{
-						delete = console.readLine().toLowerCase();
-					}while(!delete.equals("y") && !delete.equals("n"));
+					String delete =readYesOrNo("from table '"+table+"' do not satisfy the dependency '"+lhs_list.get(i)+" -> "+rhs_list.get(i)+"', delete them ? (y/n)");
 
 					if(delete.equals("y"))
 					{
@@ -573,17 +541,13 @@ public class DatabaseDependenciesManager
 					}
 					else
 					{
-						System.out.println("Delete dependency ? (y/n)");
-						delete = "";
-						do{
-							delete = console.readLine().toLowerCase();
-						}while(!delete.equals("y") && !delete.equals("n"));
+						delete = readYesOrNo("Delete dependency ? (y/n)");
 
 						if(delete.equals("y"))
 						{
 							try
 							{
-								deleteDep(table, lhs, rhs);
+								deleteDep(i);
 							}catch(SQLException sqle){
 								System.out.println("Unable to delete dependency");
 							}
@@ -624,29 +588,38 @@ public class DatabaseDependenciesManager
 	/*
 	* Finds useless dependencies and allows to delete them.
 	*/
-	private static ArrayList<Integer> findUselessDep()
-	throws SQLException
+	private static void findUselessDep()
 	{
-		ArrayList<Integer> UselessDepIndex = new ArrayList<Integer>();
-		ArrayList<String> column_names = new ArrayList<String>();
+		boolean found=false;
 
-		for(int i=0; i<table_dep_list.size(); i++)
+		for(int i=table_dep_list.size()-1; i>=0; i--)
 		{
-			if(!table_name_list.contains(table_dep_list.get(i)))
-				UselessDepIndex.add(i);
-			else
-			{
-				column_names.clear();
-				column_names = listAttributes(table_dep_list.get(i));
+			String lhs = lhs_list.get(i);
+			String rhs = rhs_list.get(i);
 
-				if(!column_names.contains(lhs_list.get(i)) || !column_names.contains(rhs_list.get(i)))
-					UselessDepIndex.add(i);
-				else if(lhs_list.get(i).equals(rhs_list.get(i)))
-					UselessDepIndex.add(i);
+			for(String uniqueLHS : lhs.split(" "))
+			{
+				if(rhs.equals(uniqueLHS))
+				{
+					found=true;
+					String delete = readYesOrNo("Useless dependency found: '"+table_dep_list.get(i)+"' : '"+lhs+"' -> '"+rhs+"', delete it ? (y/n)");
+					if(delete.equals("y"))
+					{
+						try
+						{
+							deleteDep(i);
+						}catch(SQLException sqle){
+							System.out.println("Unable to delete dependency");
+						}
+						break;
+					}
+
+				}
 			}
 		}
 
-		return UselessDepIndex;
+		if(!found)
+			System.out.println("No useless dependency found");
 	}
 
 	/*
@@ -1158,5 +1131,17 @@ public class DatabaseDependenciesManager
 		}
 
 		return ret;
+	}
+
+	private static String readYesOrNo(String message)
+	{
+		String answer = "";
+
+		System.out.println(message);
+		do{
+			answer = console.readLine().toLowerCase();
+		}while(!answer.equals("y") && !answer.equals("n"));
+
+		return answer;
 	}
 }
