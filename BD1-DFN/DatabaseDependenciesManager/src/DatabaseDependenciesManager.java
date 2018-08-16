@@ -1136,12 +1136,12 @@ public class DatabaseDependenciesManager
 
 	private static String readYesOrNo(String message)
 	{
-		String answer = "";
-
 		System.out.println(message);
-		do{
-			answer = console.readLine().toLowerCase();
-		}while(!answer.equals("y") && !answer.equals("n"));
+		
+		while(!answer.equals("y") && !answer.equals("n"))
+		{
+			answer = String answer = console.readLine("invalid answer").toLowerCase();
+		}
 
 		return answer;
 	}
