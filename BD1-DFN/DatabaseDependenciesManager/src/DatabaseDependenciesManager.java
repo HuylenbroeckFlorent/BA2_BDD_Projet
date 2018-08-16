@@ -752,6 +752,7 @@ public class DatabaseDependenciesManager
 								if(res.equals(attributes)){
 									ArrayList<String> copy = new ArrayList();
 									copy.addAll(toTest);
+									Collections.sort(copy);
 									keys.add(copy);
 									System.out.println("--- Key found ! " + copy);
 
@@ -763,8 +764,32 @@ public class DatabaseDependenciesManager
 							attrToAdd++;
 						}
 						else{
-							System.out.println("TO DO");
-							candidateFound = true;
+							while(attrToAdd <= step6.size() && !candidateFound){
+								String[] data = new String[step6.size()];
+								ArrayList<String> data2 = new ArrayList<String>();
+								String[] temp = step6.toArray(new String[step6.size()]);
+
+								combinationUtil(temp,data,0,data.length-1,0,attrToAdd, data2);
+								for(String toAdd: data2){
+									for(String temp1 : toAdd.split("")){
+										toTest.add(temp1);
+									}
+									ArrayList<String> res = closure(toTest,leftFD,rightFD);
+									removeDuplicate(res);
+									Collections.sort(res);
+									if(res.equals(attributes)){
+										ArrayList<String> copy = new ArrayList();
+										copy.addAll(toTest);
+										Collections.sort(copy);
+										keys.add(copy);
+										System.out.println("--- Key found ! " + copy);
+										candidateFound = true;
+									}
+									toTest.clear();
+									toTest.addAll(step4);
+								}
+								attrToAdd++;
+							}
 						}
 					}
 				}
@@ -777,6 +802,32 @@ public class DatabaseDependenciesManager
 			}
 		}
 	}
+
+	private static void combinationUtil(String[] arr, String[] data, int start,
+                                int end, int index, int r, ArrayList<String> res)
+    {
+        // Current combination is ready to be printed, print it
+				if (index == r)
+				{
+					String temp = "";
+					for (int j=0; j<r; j++)
+						temp += data[j];
+					res.add(temp);
+					temp = "";
+					return;
+				}
+
+				// replace index with all possible elements. The condition
+				// "end-i+1 >= r-index" makes sure that including one element
+				// at index will make a combination with remaining elements
+				// at remaining positions
+				for (int i=start; i<=end && end-i+1 >= r-index; i++)
+				{
+					data[index] = arr[i];
+					combinationUtil(arr, data, i+1, end, index+1, r, res);
+				}
+			}
+
 
 
 	private static ArrayList<String> closure(ArrayList<String> attr, ArrayList<String> leftFD, ArrayList<String> rightFD){
@@ -821,7 +872,11 @@ public class DatabaseDependenciesManager
 	private static boolean isBCNF(ArrayList<String> leftFD, ArrayList keys)
 	{
 		for(String toTest : leftFD){
-			if(!keys.contains(toTest))
+			ArrayList<String> temp = new ArrayList();
+			for(String temp1 : toTest.split(" ")){
+				temp.add(temp1);
+			}
+			if(!keys.contains(temp))
 				return false;
 		}
 		return true;
@@ -833,10 +888,17 @@ public class DatabaseDependenciesManager
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
 		for(int i = 0;i < leftFD.size(); i++){
-			if(!keys.contains((String)leftFD.get(i)))
-			for(ArrayList<String> key :  keys ){
-				if(!key.contains((String)rightFD.get(i))){
-					return false;
+			if(!isBCNF(leftFD,keys)){
+				for(ArrayList<String> key :  keys ){
+					ArrayList<String> temp = new ArrayList();
+
+					for(String temp1 : rightFD.get(i).split(" ")){
+						temp.add(temp1);
+					}
+					System.out.println(temp);
+					if(!key.contains(temp)){
+						return false;
+					}
 				}
 			}
 		}
