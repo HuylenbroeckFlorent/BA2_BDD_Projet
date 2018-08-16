@@ -622,7 +622,7 @@ public class DatabaseDependenciesManager
 			System.out.println("No useless dependency found");
 	}
 
-	/*
+	/**
 	* Lists every key or superkey for every relation.
 	*/
 	private static void findKeys()
@@ -633,9 +633,9 @@ public class DatabaseDependenciesManager
 				done.add(table);
 				System.out.println("---" + table + "---\n");
 				ArrayList<String> attributes = new ArrayList();
-				ArrayList<String> nlnr = new ArrayList();
-				ArrayList<String> onlyR = new ArrayList();
-				ArrayList<String> onlyL = new ArrayList();
+				ArrayList<String> nlnr = new ArrayList(); // Not left not right
+				ArrayList<String> onlyR = new ArrayList(); // Only right
+				ArrayList<String> onlyL = new ArrayList(); // Only left 
 				ArrayList<String> leftFD = new ArrayList();
 				ArrayList<String> rightFD = new ArrayList();
 				ArrayList<ArrayList> keys = new ArrayList();
@@ -643,74 +643,77 @@ public class DatabaseDependenciesManager
 					attributes = listAttributes(table);
 				}catch(SQLException sqle){
 					sqle.printStackTrace();
-					System.out.println("Can't ");
+					System.out.println("Error while listing '"+table+"' attributes");
 					continue;
 				}
 				Collections.sort(attributes);
-				System.out.println("Complete attribute(s) set: " + attributes);
+				System.out.println("Complete attribute set: " + attributes);
 				nlnr.addAll(attributes);
-				for(int i=0; i<table_dep_list.size(); i++){   //make nlnr array with attributes not on left nor on right
-					for(int j=0; j<lhs_list.size(); j++){
-						if(i == j && table_dep_list.get(i).equals(table)){
-							leftFD.add(lhs_list.get(j));
-							for(String f : lhs_list.get(j).split(" ")){
-								onlyL.add(f);
-								removeDuplicate(onlyL);
-							}
+				for(int i=0; i<table_dep_list.size(); i++)
+				{  
+					if(table_dep_list.get(i).equals(table)) //make nlnr array with attributes not on left nor on right
+					{
+						leftFD.add(lhs_list.get(i));
+						for(String f : lhs_list.get(i).split(" ")){
+							onlyL.add(f);
+							removeDuplicate(onlyL);
 						}
 					}
-					for(int j=0; j<rhs_list.size(); j++){
-						if(i == j && table_dep_list.get(i).equals(table)){
-							rightFD.add(rhs_list.get(j));
-							onlyR.add(rhs_list.get(j));
-							removeDuplicate(onlyR);
+					if(table_dep_list.get(i).equals(table)){
+						rightFD.add(rhs_list.get(i));
+						onlyR.add(rhs_list.get(i));
+						removeDuplicate(onlyR);
+					}
+				}
+				for(int i=0; i<table_dep_list.size(); i++) //Now we remove
+				{   
+					if(table_dep_list.get(i).equals(table))
+					{
+						for(String f : lhs_list.get(i).split(" "))
+						{
+							nlnr.remove(f);
+						}
+					}
+				
+					if(table_dep_list.get(i).equals(table))
+					{
+						nlnr.remove(rhs_list.get(i));
+						onlyL.remove(rhs_list.get(i));
+					}
+				
+					if(table_dep_list.get(i).equals(table))
+					{
+						for(String f : lhs_list.get(i).split(" "))
+						{
+							onlyR.remove(f);
 						}
 					}
 				}
-				for(int i=0; i<table_dep_list.size(); i++){   //Now we remove
-					for(int j=0; j<lhs_list.size(); j++){
-						if(i == j && table_dep_list.get(i).equals(table)){
-							for(String f : lhs_list.get(j).split(" ")){
-								nlnr.remove(f);
-							}
-						}
-					}
-					for(int j=0; j<rhs_list.size(); j++){
-						if(i == j && table_dep_list.get(i).equals(table)){
-							nlnr.remove(rhs_list.get(j));
-							onlyL.remove(rhs_list.get(j));
-						}
-					}
-					for(int j=0; j<lhs_list.size(); j++){
-						if(i == j && table_dep_list.get(i).equals(table)){
-							for(String f : lhs_list.get(j).split(" ")){
-								onlyR.remove(f);
-							}
-						}
-					}
-				}
+
 				removeDuplicate(nlnr);
 				removeDuplicate(onlyR);
 				removeDuplicate(onlyL);
+
 				Collections.sort(nlnr);
 				Collections.sort(onlyR);
 				Collections.sort(onlyL);
-				System.out.println("Step 1 Attribute(s) not on left nor on right: " + nlnr);
-				System.out.println("Step 2 Attribute(s) only on right: " +onlyR);
-				System.out.println("Step 3 Attribute(s) only on left: " +onlyL);
+
+				System.out.println("Step 1 - Attribute(s) not on the left-hand side nor on the right-hand side : " + nlnr);
+				System.out.println("Step 2 - Attribute(s) only on the right-hand side : " +onlyR);
+				System.out.println("Step 3 - Attribute(s) only on the left-hand side : " +onlyL);
 				ArrayList<String> step4 = new ArrayList();
 				step4.addAll(nlnr);
 				step4.addAll(onlyL);
 				removeDuplicate(step4);
 				Collections.sort(step4);
-				System.out.println("Step 4 combine attribute(s) on step 1 and 3: " + step4);
+				System.out.println("Step 4 - Combine attribute(s) from step 1 and 3: " + step4);
 				ArrayList<String> step5 = closure(step4, leftFD, rightFD);
 				removeDuplicate(step5);
 				Collections.sort(step5);
-				System.out.println("Step 5 closure of the attribute(s) on step 4: " + step5);
+				System.out.println("Step 5 - Closure of the attribute(s) from step 4 : " + step5);
 				if(step5.equals(attributes)){
 					keys.add(step4);
-					System.out.println("Step 6 closure of step 5 give us all attribute --> keys: " + keys);
+					System.out.println("Step 6 - Closure of step 5 gives us all attribute --> keys : " + keys);
 				}
 				else{
 					ArrayList<String> step6 = new ArrayList();
@@ -721,8 +724,8 @@ public class DatabaseDependenciesManager
 					for(String attr : onlyR){
 						step6.remove(attr);
 					}
-					System.out.println("Step 6 Find attributes not included in step 4 and 2: " + step6);
-					System.out.println("Step 7 Test closures of attributes on step 4 + one attribute in step 6 one at a time:\n");
+					System.out.println("Step 6 - Find attribute(s) not included in step 4 and 2 : " + step6);
+					System.out.println("Step 7 - Test closures of attribute(s) on step 4 plus one attribute from step 6 at a time :\n");
 					ArrayList<String> toTest = new ArrayList();
 					toTest.addAll(step4);
 					boolean candidateFound = false;
@@ -739,7 +742,7 @@ public class DatabaseDependenciesManager
 									copy.addAll(toTest);
 									Collections.sort(copy);
 									keys.add(copy);
-									System.out.println("--- Key found ! " + copy);
+									System.out.println("\tKey found : " + copy);
 
 									candidateFound = true;
 								}
@@ -767,7 +770,7 @@ public class DatabaseDependenciesManager
 										copy.addAll(toTest);
 										Collections.sort(copy);
 										keys.add(copy);
-										System.out.println("--- Key found ! " + copy);
+										System.out.println("\tKey found ! " + copy);
 										candidateFound = true;
 									}
 									toTest.clear();
@@ -779,11 +782,9 @@ public class DatabaseDependenciesManager
 					}
 				}
 				removeDuplicate(keys);
-				System.out.println("The candidate keys are: " + keys);
-				System.out.println();
+				System.out.println("The candidate keys are : " + keys+"\n");
 				System.out.println("--- BCNF ---: " + isBCNF(leftFD,keys));
-				System.out.println("--- 3NF ---: " + is3NF(leftFD,rightFD,keys));
-				System.out.println();
+				System.out.println("--- 3NF ---: " + is3NF(leftFD,rightFD,keys)+"\n");
 			}
 		}
 	}
