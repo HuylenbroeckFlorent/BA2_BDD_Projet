@@ -234,9 +234,9 @@ public class DatabaseDependenciesManager
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'uns', please type 'help' to see the correct argumentation");
-						
+
 					break;
-					
+
 				case "useless":
 					if(commandArgs.length==1)
 					{
@@ -363,7 +363,7 @@ public class DatabaseDependenciesManager
 		result = statement.executeQuery("SELECT * FROM FuncDep");
 
 		while(result.next())
-		{	
+		{
 			if(table_name_list.contains(result.getString("table_name")))
 			{
 				table_dep_list.add(result.getString("table_name"));
@@ -550,7 +550,7 @@ public class DatabaseDependenciesManager
 				if(result_not_empty)
 				{
 					System.out.println("from table '"+table+"' do not satisfy the dependency '"+lhs_list.get(i)+" -> "+rhs_list.get(i)+"', delete them ? (y/n)");
-					
+
 					String delete = "";
 					do{
 						delete = console.readLine().toLowerCase();
@@ -886,7 +886,6 @@ public class DatabaseDependenciesManager
 				boolean ok = false;
 				for(ArrayList<String> key :  keys ){
 					if(key.contains(rightFD.get(i))){
-						System.out.println("OK");
 						ok = true;
 					}
 
