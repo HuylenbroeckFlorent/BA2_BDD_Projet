@@ -236,9 +236,9 @@ public class DatabaseDependenciesManager
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'uns', please type 'help' to see the correct argumentation");
-						
+
 					break;
-					
+
 				case "useless":
 					if(commandArgs.length==1)
 					{
@@ -365,7 +365,7 @@ public class DatabaseDependenciesManager
 		result = statement.executeQuery("SELECT * FROM FuncDep");
 
 		while(result.next())
-		{	
+		{
 			if(table_name_list.contains(result.getString("table_name")))
 			{
 				table_dep_list.add(result.getString("table_name"));
@@ -554,7 +554,7 @@ public class DatabaseDependenciesManager
 				if(result_not_empty)
 				{
 					System.out.println("from table '"+table+"' do not satisfy the dependency '"+lhs_list.get(i)+" -> "+rhs_list.get(i)+"', delete them ? (y/n)");
-					
+
 					String delete = "";
 					do{
 						delete = console.readLine().toLowerCase();
@@ -900,16 +900,20 @@ public class DatabaseDependenciesManager
 	private static boolean is3NF(ArrayList<String> leftFD,ArrayList<String> rightFD, ArrayList<ArrayList> keys)
 	{
 		for(int i = 0;i < leftFD.size(); i++){
-			if(!isBCNF(leftFD,keys)){
+			ArrayList<String> temp2 = new ArrayList();
+			for(String temp4 : leftFD.get(i).split(" ")){
+				temp2.add(temp4);
+			}
+			if(!keys.contains(temp2)){
+				boolean ok = false;
 				for(ArrayList<String> key :  keys ){
-					ArrayList<String> temp = new ArrayList();
+					if(key.contains(rightFD.get(i))){
+						ok = true;
+					}
 
-					for(String temp1 : rightFD.get(i).split(" ")){
-						temp.add(temp1);
-					}
-					if(!key.contains(temp)){
-						return false;
-					}
+				}
+				if(!ok){
+					return false;
 				}
 			}
 		}
