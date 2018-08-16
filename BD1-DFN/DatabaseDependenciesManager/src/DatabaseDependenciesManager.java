@@ -228,7 +228,6 @@ public class DatabaseDependenciesManager
 						System.out.println("Invalid number of arguments for method 'sql', please type 'help' to see the correct argumentation");
 					break;
 
-<<<<<<< HEAD
 				case "uns":
 					if(commandArgs.length==1)
 					{
@@ -239,8 +238,6 @@ public class DatabaseDependenciesManager
 						
 					break;
 					
-=======
->>>>>>> b9db2f87a7ecd40b6b7ddbfafa8dfdd07c31a041
 				case "useless":
 					if(commandArgs.length==1)
 					{
@@ -365,15 +362,9 @@ public class DatabaseDependenciesManager
 
 		statement=connection.createStatement();
 		result = statement.executeQuery("SELECT * FROM FuncDep");
-<<<<<<< HEAD
-		
-		while(result.next())
-		{	
-=======
 
 		while(result.next())
-		{
->>>>>>> b9db2f87a7ecd40b6b7ddbfafa8dfdd07c31a041
+		{	
 			if(table_name_list.contains(result.getString("table_name")))
 			{
 				table_dep_list.add(result.getString("table_name"));
