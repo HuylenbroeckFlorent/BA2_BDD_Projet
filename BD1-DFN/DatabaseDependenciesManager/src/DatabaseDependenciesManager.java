@@ -635,7 +635,7 @@ public class DatabaseDependenciesManager
 				ArrayList<String> attributes = new ArrayList();
 				ArrayList<String> nlnr = new ArrayList(); // Not left not right
 				ArrayList<String> onlyR = new ArrayList(); // Only right
-				ArrayList<String> onlyL = new ArrayList(); // Only left 
+				ArrayList<String> onlyL = new ArrayList(); // Only left
 				ArrayList<String> leftFD = new ArrayList();
 				ArrayList<String> rightFD = new ArrayList();
 				ArrayList<ArrayList> keys = new ArrayList();
@@ -650,7 +650,7 @@ public class DatabaseDependenciesManager
 				System.out.println("Complete attribute set: " + attributes);
 				nlnr.addAll(attributes);
 				for(int i=0; i<table_dep_list.size(); i++)
-				{  
+				{
 					if(table_dep_list.get(i).equals(table)) //make nlnr array with attributes not on left nor on right
 					{
 						leftFD.add(lhs_list.get(i));
@@ -666,7 +666,7 @@ public class DatabaseDependenciesManager
 					}
 				}
 				for(int i=0; i<table_dep_list.size(); i++) //Now we remove
-				{   
+				{
 					if(table_dep_list.get(i).equals(table))
 					{
 						for(String f : lhs_list.get(i).split(" "))
@@ -674,13 +674,13 @@ public class DatabaseDependenciesManager
 							nlnr.remove(f);
 						}
 					}
-				
+
 					if(table_dep_list.get(i).equals(table))
 					{
 						nlnr.remove(rhs_list.get(i));
 						onlyL.remove(rhs_list.get(i));
 					}
-				
+
 					if(table_dep_list.get(i).equals(table))
 					{
 						for(String f : lhs_list.get(i).split(" "))
@@ -731,9 +731,16 @@ public class DatabaseDependenciesManager
 					boolean candidateFound = false;
 					int attrToAdd = 1;
 					while(!candidateFound){
-						if(attrToAdd == 1 ){
-							for(String toAdd : step6){
-								toTest.add(toAdd);
+						while(attrToAdd <= step6.size() && !candidateFound){
+							String[] data = new String[step6.size()];
+							ArrayList<String> data2 = new ArrayList<String>();
+							String[] temp = step6.toArray(new String[step6.size()]);
+
+							combinationUtil(temp,data,0,data.length-1,0,attrToAdd, data2);
+							for(String toAdd: data2){
+								for(String temp1 : toAdd.split("")){
+									toTest.add(temp1);
+								}
 								ArrayList<String> res = closure(toTest,leftFD,rightFD);
 								removeDuplicate(res);
 								Collections.sort(res);
@@ -742,42 +749,14 @@ public class DatabaseDependenciesManager
 									copy.addAll(toTest);
 									Collections.sort(copy);
 									keys.add(copy);
-									System.out.println("\tKey found : " + copy);
-
+									System.out.println("\tKey found ! " + copy);
 									candidateFound = true;
 								}
 								toTest.clear();
 								toTest.addAll(step4);
 							}
 							attrToAdd++;
-						}
-						else{
-							while(attrToAdd <= step6.size() && !candidateFound){
-								String[] data = new String[step6.size()];
-								ArrayList<String> data2 = new ArrayList<String>();
-								String[] temp = step6.toArray(new String[step6.size()]);
 
-								combinationUtil(temp,data,0,data.length-1,0,attrToAdd, data2);
-								for(String toAdd: data2){
-									for(String temp1 : toAdd.split("")){
-										toTest.add(temp1);
-									}
-									ArrayList<String> res = closure(toTest,leftFD,rightFD);
-									removeDuplicate(res);
-									Collections.sort(res);
-									if(res.equals(attributes)){
-										ArrayList<String> copy = new ArrayList();
-										copy.addAll(toTest);
-										Collections.sort(copy);
-										keys.add(copy);
-										System.out.println("\tKey found ! " + copy);
-										candidateFound = true;
-									}
-									toTest.clear();
-									toTest.addAll(step4);
-								}
-								attrToAdd++;
-							}
 						}
 					}
 				}
