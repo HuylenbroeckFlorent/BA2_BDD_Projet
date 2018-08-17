@@ -56,8 +56,6 @@ public class DatabaseDependenciesManager
 			String commandLine = console.readLine();
 			String[] commandArgs = commandLine.split(" ");
 
-			if(commandArgs[0].equals("") && connection==null){try{connect("./test_DB/test.db");}catch(SQLException sqle){sqle.printStackTrace();}continue;}//testing purpose
-
 			if(commandArgs[0].equals(""))
 			{
 				continue;
@@ -197,9 +195,9 @@ public class DatabaseDependenciesManager
 				case "list":
 					try{
 						String table = selectTable("Which table to show dependency from ? Leave blank to show every dependencies",true);
-						listDep(table,false);//TODO
+						listDep(table,false);
 					}catch(SQLException sqle){
-						System.out.println("Error"); //TODO
+						System.out.println("Error");
 						continue;
 					}
 					break;
@@ -486,7 +484,6 @@ public class DatabaseDependenciesManager
 					condition+= ("A."+rhs+" <> B."+rhs);
 					tuple+= (rhs+")");
 				}
-				//System.out.println("SELECT "+attributes+" FROM "+table+" A,"+table+" B "+condition);
 				String query = "SELECT "+attributes+" FROM "+table+" A,"+table+" B "+condition;
 				boolean result_not_empty=false;
 
@@ -534,7 +531,6 @@ public class DatabaseDependenciesManager
 					if(delete.equals("y"))
 					{
 						String deleteQuery=("DELETE FROM "+table+" WHERE "+tuple+" IN ("+query+");");
-						//System.out.println(deleteQuery);
 						try{
 							statement.execute(deleteQuery);
 							System.out.println("Row(s) deleted");
@@ -949,14 +945,6 @@ public class DatabaseDependenciesManager
 			}
 		}
 		return true;
-	}
-
-	/**
-	*
-	*/
-	private static void exportTo3NF()
-	{
-		//TODO
 	}
 
 	/**
