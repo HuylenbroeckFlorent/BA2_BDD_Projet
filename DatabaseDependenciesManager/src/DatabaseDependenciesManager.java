@@ -770,7 +770,7 @@ public class DatabaseDependenciesManager
 
 			if(step5.equals(attributes)){
 				keys.add(new Key(table, step4));
-				//continue;
+				continue;
 			}
 
 			// step 6) Else, find attributes not included in step 2 and 4
@@ -876,7 +876,7 @@ public class DatabaseDependenciesManager
 			combinationUtil(arr, data, i+1, end, index+1, r, res);
 		}
 	}
- 
+
 	/**
 	* Figures out the closure of a given table for a given set of attribute
 	*
@@ -903,7 +903,7 @@ public class DatabaseDependenciesManager
 			closure_copy.addAll(closure);
 
 			boolean containsLHS=true;
-			
+
 			for(int i=0; i<unusedRight.size(); i++)
 			{
 				for(String uniqueLHS : unusedLeft.get(i).split(" "))
@@ -1263,7 +1263,7 @@ public class DatabaseDependenciesManager
 	private static String readYesOrNo(String message)
 	{
 		String answer = console.readLine(message).toLowerCase();
-		
+
 		while(!answer.equals("y") && !answer.equals("n"))
 		{
 			answer = console.readLine("invalid answer").toLowerCase();
