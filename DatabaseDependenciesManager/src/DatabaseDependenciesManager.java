@@ -132,7 +132,6 @@ public class DatabaseDependenciesManager
 						try{
 							connect(commandArgs[1]);
 						}catch(SQLException sqle){
-							sqle.printStackTrace();
 							System.out.println("Can't connect");
 							continue;
 						}
@@ -160,7 +159,6 @@ public class DatabaseDependenciesManager
 							}
 
 						}catch(SQLException sqle){
-							sqle.printStackTrace();
 						}
 					}
 					else
@@ -221,7 +219,6 @@ public class DatabaseDependenciesManager
 							executeSQL(commandLine.substring(commandLine.indexOf(" "),commandLine.length()));
 							System.out.println("Applied");
 						}catch(SQLException sqle){
-							sqle.printStackTrace();
 							System.out.println("Unable to aplly SQL request");
 						}
 					}
@@ -521,7 +518,6 @@ public class DatabaseDependenciesManager
 					}
 
 				}catch (SQLException sqle){
-					sqle.printStackTrace();
 				}
 
 				if(result_not_empty)
@@ -658,7 +654,6 @@ public class DatabaseDependenciesManager
 				try{
 					attributes = listAttributes(table);
 				}catch(SQLException sqle){
-					sqle.printStackTrace();
 					System.out.println("Error while listing '"+table+"' attributes");
 					continue;
 				}
