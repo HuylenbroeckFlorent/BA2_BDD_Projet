@@ -84,8 +84,12 @@ public class DatabaseDependenciesManager
 									+"\tHelps deleteting a dependency\n"
 									+"disconnect\n"
 									+"\tDisconnects from current database\n"
+									+"is3NF\n"
+									+"\tChecks if tables recpect 3NF normalization\n"
+									+"isBCNF\n"
+									+"\tChecks if tables respect BCNF normalization\n"
 									+"keys\n"
-									+"\tFinds keys and checks BCNF/3NF normalisation\n"
+									+"\tShow keys\n"
 									+"list\n"
 									+"\tLists dependencies associated to current database.\n"
 									+"quit\n"
@@ -106,6 +110,9 @@ public class DatabaseDependenciesManager
 
 			switch(commandArgs[0])
 			{
+				case "u":
+					exportTo3NF();
+					break;
 				case "add":
 					if(commandArgs.length==1)
 					{
@@ -165,6 +172,7 @@ public class DatabaseDependenciesManager
 							}
 
 						}catch(SQLException sqle){
+							System.out.println("Unable to select table");
 						}
 					}
 					else
@@ -192,10 +200,54 @@ public class DatabaseDependenciesManager
 
 					break;
 
+				case "is3NF":
+					if(commandArgs.length==1)
+					{
+						if(is3NF())
+						{
+							System.out.println("Database respects 3NF normalization");
+						}
+						break;
+					}
+					else
+						System.out.println("Method 'is3NF' requires no arguments");
+
+				case "isBCNF":
+					if(commandArgs.length==1)
+					{
+						if(isBCNF())
+						{
+							System.out.println("Database respects BCNF normalization");
+						}
+						break;
+					}
+					else
+						System.out.println("Method 'isBCNF' requires no arguments");
+
 				case "keys":
-					findKeys();
+					String tables = "";
+					try
+					{
+						tables = selectTable("Which table to show the keys from ? Leave blank to show every key", true);
+					}catch(SQLException sqle){
+						System.out.println("Unable to select table");
+					}
+
+					ArrayList<String> selected_tables = new ArrayList<String>();
+
+					if(tables.equals(""))
+					{
+						selected_tables.addAll(table_name_list);
+					}
+					else
+					{
+						selected_tables.add(tables);
+					}
+
 					boolean name_printed=false;
-					for(String table : table_name_list)
+					boolean first=true;
+
+					for(String table : selected_tables)
 					{
 						name_printed=false;
 						for(Key key : keys)
@@ -204,10 +256,15 @@ public class DatabaseDependenciesManager
 							{
 								if(!name_printed)
 								{
-									System.out.println("Keys from table '"+table+"'");
+									if(!first)
+									{
+										System.out.println();
+									}
+									first=false;
+									System.out.println("Keys from table '"+table+"' :");
 									name_printed=true;
 								}
-								System.out.println(key.getKey());
+								System.out.println("\t"+key.getKey());
 							}
 						}
 					}
@@ -224,15 +281,18 @@ public class DatabaseDependenciesManager
 					break;
 
 				case "logical":
-
-					String useless=readYesOrNo("It is advised to delete useless dependencies first, abort ? (y/n) : ");
-
-					if(useless.equals("y"))
+					ArrayList<Integer> logical_consequences = findLogicalConsequences();
+					if(logical_consequences.size()==0)
 					{
+						System.out.println("No logical consequence found");
 						continue;
 					}
+					for(int i=0; i<logical_consequences.size(); i++)
+					{
+						int j=logical_consequences.get(i);
 
-					findLogicalConsequences();
+						System.out.println("Dependency '"+table_dep_list.get(j)+"' : '"+lhs_list.get(j)+"' -> '"+rhs_list.get(j)+"' is a logical consequence");
+					}
 					break;
 
 				case "sql":
@@ -242,7 +302,7 @@ public class DatabaseDependenciesManager
 							executeSQL(commandLine.substring(commandLine.indexOf(" "),commandLine.length()));
 							System.out.println("Applied");
 						}catch(SQLException sqle){
-							System.out.println("Unable to aplly SQL request");
+							System.out.println("Unable to apply SQL request");
 						}
 					}
 					else
@@ -262,7 +322,30 @@ public class DatabaseDependenciesManager
 				case "useless":
 					if(commandArgs.length==1)
 					{
-						findUselessDep();
+						ArrayList<Integer> useless_dependencies = findUselessDep();
+
+						if(useless_dependencies.size()==0)
+						{
+							System.out.println("No useless dependencies found");
+							continue;
+						}
+
+						for(Integer i : useless_dependencies)
+						{
+							System.out.println("Useless dependency found : '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"'. Delete it ? (y/n)");
+							System.out.flush();
+
+							String delete = readYesOrNo("");
+							if(delete.equals("y"))
+							{
+								try
+								{
+									deleteDep(i);
+								}catch(SQLException sqle){
+									System.out.println("Unable to delete dependency");
+								}
+							}
+						}
 					}
 					else
 						System.out.println("Invalid number of arguments for method 'useless', please type 'help' to see the correct argumentation");
@@ -325,6 +408,10 @@ public class DatabaseDependenciesManager
 		lhs_list.clear();
 		rhs_list.clear();
 
+		ArrayList<String> useless_name_list = new ArrayList<String>();
+		ArrayList<String> useless_lhs_list = new ArrayList<String>();
+		ArrayList<String> useless_rhs_list = new ArrayList<String>();
+
 		checkFuncDepTable();
 
 		DatabaseMetaData dmd = connection.getMetaData();
@@ -337,7 +424,7 @@ public class DatabaseDependenciesManager
 			table_name_list.add(result.getString(3));
 		}
 
-		statement=connection.createStatement();
+		statement = connection.createStatement();
 		result = statement.executeQuery("SELECT * FROM FuncDep");
 
 		while(result.next())
@@ -350,11 +437,22 @@ public class DatabaseDependenciesManager
 			}
 			else
 			{
-				deleteDep(result.getString("table_name"),result.getString("lhs"),result.getString("rhs"));
+				useless_name_list.add(result.getString("table_name"));
+				useless_lhs_list.add(result.getString("lhs"));
+				useless_rhs_list.add(result.getString("rhs"));
+			}
+		}
+
+		if(useless_name_list.size()>0)
+		{
+			for(int i=0; i<useless_name_list.size(); i++)
+			{
+				deleteDep(useless_name_list.get(i), useless_lhs_list.get(i), useless_rhs_list.get(i));
 			}
 		}
 
 		ndep=table_dep_list.size();
+		findKeys();
 	}
 
 	/**
@@ -396,6 +494,8 @@ public class DatabaseDependenciesManager
 
 		if(statement!=null)
 			statement.close();
+
+		findKeys();
 	}
 
 	/**
@@ -444,6 +544,8 @@ public class DatabaseDependenciesManager
 		statement.executeUpdate("DELETE FROM FuncDep WHERE table_name='"+table+"' AND lhs='"+lhs+"' AND rhs='"+rhs+"'");
 
 		System.out.println("Dependency '"+table+"' : '"+lhs+"' -> '"+rhs+"'  deleted");
+
+		findKeys();
 	}
 
 	/**
@@ -458,10 +560,11 @@ public class DatabaseDependenciesManager
 		checkFuncDepTable();
 		statement=connection.createStatement();
 		statement.executeUpdate("DELETE FROM FuncDep WHERE table_name='"+table_dep_list.get(i)+"' AND lhs='"+lhs_list.get(i)+"' AND rhs='"+rhs_list.get(i)+"'");
-		System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"'  deleted");
+		System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"'  deleteDep");
 		table_dep_list.remove(i);
 		lhs_list.remove(i);
 		rhs_list.remove(i);
+		findKeys();
 	}
 
 	/**
@@ -584,48 +687,74 @@ public class DatabaseDependenciesManager
 	/**
 	* Finds logical consequences and allows the user to see them.
 	*/
-	private static void findLogicalConsequences()
+	private static ArrayList<Integer> findLogicalConsequences()
 	{
-		for(int i=0; i<table_dep_list.size(); i++)
+		ArrayList<Integer> logical_consequences = new ArrayList<Integer>();
+
+		for(String table : table_name_list)
 		{
-			ArrayList<String> left_attributes_of_dep_i = new ArrayList<String>();
-
-			for(String uniqueLHS : lhs_list.get(i).split(" "))
+			for(int i=0; i<table_dep_list.size(); i++)
 			{
-				left_attributes_of_dep_i.add(uniqueLHS);
-			}
-
-			ArrayList<String> lhs_without_dep_i = new ArrayList<String>();
-			ArrayList<String> rhs_without_dep_i = new ArrayList<String>();
-
-			for(int j=0; j<lhs_list.size(); j++)
-			{
-				if(j==i)
+				if(table_dep_list.get(i).equals(table))
 				{
-					continue;
-				}
-				if(table_dep_list.get(j).equals(table_dep_list.get(i)))
-				{
-					lhs_without_dep_i.add(lhs_list.get(j));
-					rhs_without_dep_i.add(rhs_list.get(j));
-				}
-			}
+					ArrayList<String> left_attributes_of_dep_i = new ArrayList<String>();
 
-			ArrayList<String> closure = closure(left_attributes_of_dep_i, lhs_without_dep_i, rhs_without_dep_i);
+					for(String uniqueLHS : lhs_list.get(i).split(" "))
+					{
+						left_attributes_of_dep_i.add(uniqueLHS);
+					}
 
-			if(closure.contains(rhs_list.get(i)))
-			{
-				System.out.println("Dependency '"+table_dep_list.get(i)+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"' is a logical consequence");
+					ArrayList<String> lhs_without_dep_i = new ArrayList<String>();
+					ArrayList<String> rhs_without_dep_i = new ArrayList<String>();
+
+					for(int j=0; j<lhs_list.size(); j++)
+					{
+						if(j==i || logical_consequences.contains(j))
+						{
+							continue;
+						}
+						if(table_dep_list.get(j).equals(table_dep_list.get(i)))
+						{
+							lhs_without_dep_i.add(lhs_list.get(j));
+							rhs_without_dep_i.add(rhs_list.get(j));
+						}
+					}
+
+					removeDuplicate(lhs_without_dep_i);
+					removeDuplicate(rhs_without_dep_i);
+
+					ArrayList<String> closure = closure(left_attributes_of_dep_i, lhs_without_dep_i, rhs_without_dep_i);
+
+					System.out.println(table_dep_list.get(i)+" : "+lhs_list.get(i)+" -> "+rhs_list.get(i));
+					System.out.println("left attirbutes : "+left_attributes_of_dep_i);
+					System.out.println("lhs without i : "+lhs_without_dep_i);
+					System.out.println("rhs without i : "+rhs_without_dep_i);
+					System.out.println("closure : "+closure);
+					System.out.println("Does "+closure+" contains "+rhs_list.get(i)+" ?");
+					System.out.println(closure.contains(rhs_list.get(i)));
+					System.out.println();
+
+					if(closure.contains(rhs_list.get(i)))
+					{
+						logical_consequences.add(i);
+					}
+				}
 			}
 		}
+
+		Collections.sort(logical_consequences);
+
+		return logical_consequences;
 	}
 
 	/**
 	* Finds useless dependencies and allows to delete them.
+	*
+	* @return 	ArrayList<Integer>, the indexes of the useless dependencies
 	*/
-	private static void findUselessDep()
+	private static ArrayList<Integer> findUselessDep()
 	{
-		boolean found=false;
+		ArrayList<Integer> useless_dependencies = new ArrayList<Integer>();
 
 		for(int i=table_dep_list.size()-1; i>=0; i--)
 		{
@@ -636,25 +765,12 @@ public class DatabaseDependenciesManager
 			{
 				if(rhs.equals(uniqueLHS))
 				{
-					found=true;
-					String delete = readYesOrNo("Useless dependency found: '"+table_dep_list.get(i)+"' : '"+lhs+"' -> '"+rhs+"', delete it ? (y/n)");
-					if(delete.equals("y"))
-					{
-						try
-						{
-							deleteDep(i);
-						}catch(SQLException sqle){
-							System.out.println("Unable to delete dependency");
-						}
-						break;
-					}
-
+					useless_dependencies.add(i);
 				}
 			}
 		}
 
-		if(!found)
-			System.out.println("No useless dependency found");
+		return useless_dependencies;
 	}
 
 	/**
@@ -666,7 +782,7 @@ public class DatabaseDependenciesManager
 	* step 3) Lists attributes only on the left-hand side
 	* step 4) Combines attributes from step 1 and 3
 	* step 5) Find the closure of the attributes from step 4
-	*    	  If step 5) returns the complete attribute set from step 0), key is step 0)
+	*    	  If step 5) returns the complete attribute set from step 0), a key is step 4)
 	* step 6) Else, find attributes not included in step 2 and 4
 	* step 7) Compute closure of attributes from step 4, plus all possible permutation of attribute from step 6
 	*    	  If the closure equals step 0) and is minimal, the closure is then sorted and added to "keys"
@@ -766,11 +882,10 @@ public class DatabaseDependenciesManager
 
 			Collections.sort(step5);
 
-			// If step 5) returns the complete attribute set from step 0), key is step 4)
+			// If step 5) returns the complete attribute set from step 0), a key is step 4)
 
 			if(step5.equals(attributes)){
 				keys.add(new Key(table, step4));
-				continue;
 			}
 
 			// step 6) Else, find attributes not included in step 2 and 4
@@ -853,7 +968,6 @@ public class DatabaseDependenciesManager
 	private static void combinationUtil(String[] arr, String[] data, int start,
                                 int end, int index, int r, ArrayList<String> res)
     {
-        // Current combination is ready to be printed, print it
 		if (index == r)
 		{
 			String temp = "";
@@ -966,60 +1080,218 @@ public class DatabaseDependenciesManager
 	/**
 	* Checks if the database respects BCNF normalisation.
 	*
-	* @param table_lhs 	ArrayList<String>, left part of the functional dependencies.
-	* @param keys 		ArrayList, keys of the concerned table.
+	* @param table 		String, the table to check the BCNF compliance
 	* @return 			boolean, true if the table is BCNF compliant.
 	*/
-	private static boolean isBCNF(ArrayList<String> table_lhs, ArrayList keys)
+	private static boolean isBCNF()
 	{
-		for(String toTest : table_lhs)
+		boolean bcnf=true;
+
+		for(String table : table_name_list)
 		{
-			ArrayList<String> temp = new ArrayList();
-			for(String temp1 : toTest.split(" "))
+			for(int i=0; i<table_dep_list.size(); i++)
 			{
-				temp.add(temp1);
+				if(table_dep_list.get(i).equals(table))
+				{
+					ArrayList<String> unique_lhs_attribute = new ArrayList<String>();
+					for(String unique_lhs : lhs_list.get(i).split(" "))
+					{
+						unique_lhs_attribute.add(unique_lhs);
+					}
+
+					if(!(isKey(table,unique_lhs_attribute)))
+					{
+						System.out.println("\tDependency '"+table+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"' fails BCNF compliance : '"+lhs_list.get(i)+"' is not a key");
+						bcnf=false;
+					}
+					
+				}
 			}
-			if(!keys.contains(temp))
-				return false;
 		}
-		return true;
+		return bcnf;
 	}
 
 	/**
 	* Checks if the database respects 3NF normalisation.
 	*
-	* @param table_lhs 	ArrayList<String>, left part of the functional dependencies.
-	* @param table_rhs 	ArrayList<String>, right part of the functional dependencies.
-	* @param keys 		ArrayList, keys of the concerned table.
-	* @return 			boolean, true if the table is 3NF compliant.
+	* @return 			boolean, true if the table is 3NF compliant
 	*/
-	private static boolean is3NF(ArrayList<String> table_lhs,ArrayList<String> table_rhs, ArrayList<ArrayList> keys)
+	private static boolean is3NF()
 	{
-		for(int i = 0;i < table_lhs.size(); i++)
-		{
-			ArrayList<String> temp2 = new ArrayList();
-			for(String temp4 : table_lhs.get(i).split(" "))
-			{
-				temp2.add(temp4);
-			}
-			if(!keys.contains(temp2))
-			{
-				boolean ok = false;
-				for(ArrayList<String> key :  keys )
-				{
-					if(key.contains(table_rhs.get(i)))
-					{
-						ok = true;
-					}
+		boolean _3nf=true;
 
-				}
-				if(!ok)
+		for(String table : table_name_list)
+		{
+			_3nf = _3nf && is3NF(table);
+		}
+
+		return _3nf;
+	}
+
+	/**
+	* Checks if a table respects 3NF normalisation.
+	*
+	* @param table 		String, the table to check the 3NF compliance
+	* @return 			boolean, true if the table is 3NF compliant
+	*/
+	private static boolean is3NF(String table)
+	{
+		boolean _3nf=true;
+
+		boolean lhs_is_key=true;
+		boolean rhs_is_prime=true;
+
+		for(int i=0; i<table_dep_list.size(); i++)
+		{
+			if(table_dep_list.get(i).equals(table))
+			{
+				ArrayList<String> unique_lhs_attribute = new ArrayList<String>();
+
+				for(String unique_lhs : lhs_list.get(i).split(" "))
 				{
-					return false;
+					unique_lhs_attribute.add(unique_lhs);
 				}
+
+				lhs_is_key = isKey(table, unique_lhs_attribute);
+				rhs_is_prime = isPrime(table, rhs_list.get(i));
+
+				if(!(lhs_is_key || rhs_is_prime))
+				{
+					_3nf=false;
+
+					if(!lhs_is_key)
+					{
+						System.out.println("\tDependency '"+table+"' : '"+lhs_list.get(i)+"' -> '"+rhs_list.get(i)+"' fails 3NF compliance : '"+lhs_list.get(i)+"' is not a key and '"+rhs_list.get(i)+"' is not prime");
+					}
+				}	
 			}
 		}
-		return true;
+
+		return _3nf;
+	}
+
+	/**
+	* Decompose the database in order to be 3NF compliant
+	*/
+	private static void exportTo3NF()
+	{
+		// Delete useless dependencies
+		ArrayList<Integer> indexes = findUselessDep();
+		for(int i : indexes)
+		{
+			try
+			{
+				deleteDep(i);
+			}catch(SQLException sqle){}
+		}
+
+		//Delete logical consequences
+		indexes=findLogicalConsequences();
+		for(int i : indexes)
+		{
+			try
+			{
+				deleteDep(i);
+			}catch(SQLException sqle){}
+		}
+	
+		for(String table : table_name_list)
+		{
+			if(is3NF(table))
+			{
+				continue;
+			}
+
+			canonicalCover(table);
+
+		}
+	}
+
+
+
+	/**
+	* Checks if an attribute is prime for the selected table
+	*
+	* @param table 			String, the table selected
+	* @param attribute 		String, the attribute to test
+	* @return 				boolean, true if 'attribute' is a key
+	*/
+	private static boolean isPrime(String table, String attribute)
+	{
+		boolean isKey = false;
+
+		for(Key key : keys)
+		{
+			if(key.getTable_name().equals(table))
+			{
+				isKey = isKey || key.getKey().contains(attribute);
+			}
+		}
+		return isKey;
+	}
+
+	/**
+	* Checks if a set of attribute is a key for the selected table
+	*
+	* @param table 			String, the table selected
+	* @param attributes 	Arraylist<String>, the set of attributes to test
+	* @return 				boolean, true if 'attribute' is a key
+	*/
+	private static boolean isKey(String table, ArrayList<String> attributes)
+	{
+		boolean isKey = false;
+
+		for(Key key : keys)
+		{
+			if(key.getTable_name().equals(table))
+			{
+				isKey = isKey || attributes.containsAll(key.getKey());
+			}
+		}
+		return isKey;
+	}
+
+	private static ArrayList<String> canonicalCover(String table)
+	{
+		ArrayList<String> table_lhs = new ArrayList<String>();
+		ArrayList<String> table_rhs = new ArrayList<String>();
+
+		for(int i=0; i<table_dep_list.size(); i++)
+		{
+			if(table_dep_list.equals(table))
+			{
+				table_lhs.add(lhs_list.get(i));
+				table_rhs.add(rhs_list.get(i));
+			}
+		}
+
+		ArrayList<String> canonical_lhs = new ArrayList<String>();
+		ArrayList<String> canonical_rhs = new ArrayList<String>();
+
+		while(true)
+		{
+			for(int i=0; i<table_lhs.size(); i++)
+			{
+				for(int j=0; j<table_lhs.size(); j++)
+				{
+					if(i!=j)
+					{
+						if(table_lhs.get(i).equals(table_lhs.get(j)))
+						{
+							canonical_lhs.add(table_lhs.get(i));
+							canonical_rhs.add((table_rhs.get(i)+" "+table_rhs.get(j)));
+						}
+					}
+				}
+			}
+			break;
+		}
+
+		for(int i=0; i<canonical_lhs.size(); i++)
+		{
+			System.out.println(canonical_lhs.get(i)+" -> "+canonical_rhs.get(i));
+		}
+		return canonical_lhs;
 	}
 
 	/**
@@ -1037,6 +1309,7 @@ public class DatabaseDependenciesManager
 			statement.close();
 
 		retrieveData();
+		System.out.println();
 	}
 
 	/**
@@ -1070,7 +1343,6 @@ public class DatabaseDependenciesManager
 				nb = Integer.parseInt(in);
 				if(nb>0 && nb<=table_name_list.size())
 				{
-					System.out.println("Table '"+table_name_list.get(nb-1)+"' selected");
 					table_name = table_name_list.get(nb-1);
 					break;
 				}
