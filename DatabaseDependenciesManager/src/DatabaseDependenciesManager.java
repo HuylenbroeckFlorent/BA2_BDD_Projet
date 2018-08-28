@@ -77,19 +77,19 @@ public class DatabaseDependenciesManager
 			{
 				System.out.println(""
 									+"add\n"
-									+"\tHelps adding a dependency\n"
+									+"\tHelps adding a dependency.\n"
 									+"connect [path]\n"
-									+"\tConnects to a database.\n"
+									+"\tConnects to a database. Local databases can be created by this command.\n"
 									+"delete\n"
-									+"\tHelps deleteting a dependency\n"
+									+"\tHelps deleteting a dependency.\n"
 									+"disconnect\n"
-									+"\tDisconnects from current database\n"
+									+"\tDisconnects from current database.\n"
 									+"is3NF\n"
-									+"\tChecks if tables recpect 3NF normalization\n"
+									+"\tChecks if tables recpect 3NF normalization.\n"
 									+"isBCNF\n"
-									+"\tChecks if tables respect BCNF normalization\n"
+									+"\tChecks if tables respect BCNF normalization.\n"
 									+"keys\n"
-									+"\tShow keys\n"
+									+"\tShow keys.\n"
 									+"list\n"
 									+"\tLists dependencies associated to current database.\n"
 									+"quit\n"
@@ -118,9 +118,12 @@ public class DatabaseDependenciesManager
 							{
 								String table = selectTable("Which table does the dependency affects ?",false);
 								String lhs = selectAttributes("Which attribute(s) makes the left-hand side of the lhs->rhs dependency ?\nFor multiple arguments, use spaces", table, true);
-								String rhs = selectAttributes("Which attribute makes the right-hand side of the lhs->rhs dependency ?", table, false);
+								String rhs = selectAttributes("Which attribute makes the right-hand side of the lhs->rhs dependency ? \nFor multiple arguments, use spaces (multiple arguments will be split into singular DF's)", table, true);
 
-								addDep(table,lhs,rhs);
+								for(String uniqueRHS : rhs.split(" "))
+								{
+									addDep(table,lhs,uniqueRHS);
+								}
 							}
 							else
 							{
@@ -772,6 +775,8 @@ public class DatabaseDependenciesManager
 				}
 			}
 		}
+		Collections.sort(useless_dependencies);
+
 		return useless_dependencies;
 	}
 
