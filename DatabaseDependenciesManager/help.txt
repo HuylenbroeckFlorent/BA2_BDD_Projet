@@ -1,5 +1,0 @@
-connect [path] 		Connects to a database.
-exit 			Quits application.
-list [table]			Lists dependencies associated to current database.
-quit 			Quits application.
-sql [command] 		Execute an sql command, no output will be shown.
