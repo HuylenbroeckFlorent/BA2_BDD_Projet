@@ -100,6 +100,7 @@ public class DatabaseDependenciesManager
 									+"\tFinds unsatisfied dependencies and allows to delete them or the bad tuples.\n"
 									+"useless\n"
 									+"\tFinds useless dependencies and allows to delete them.");
+				continue;
 			}
 
 			else if(connection==null && !commandArgs[0].equals("connect"))
